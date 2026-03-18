@@ -1,4 +1,4 @@
-# SE104___NhapmonCongnghePhanmem
+<img width="1019" height="274" alt="{3644BAF5-582E-40E8-8A6C-AB9B6A36B803}" src="https://github.com/user-attachments/assets/8914f80b-dcc5-42bf-a44b-798306bf975f" /># SE104___NhapmonCongnghePhanmem
 
 ## Giới thiệu môn học
 
@@ -13,7 +13,7 @@
 | :---: | :---: | :--- | :--- | :--- |
 | 1 | 24521163 | Trần Bảo Ngọc | [BNgocsayhiii](https://github.com/) | 24521163@gm.uit.edu.vn |
 | 2 |  | Trương Vân Hà | [](https://github.com/) | @gm.uit.edu.vn |
-| 3 |  | Nguyễn Thị Ngọc Như | [nhuntn](https://github.com/) | @gm.uit.edu.vn |
+| 3 | 24521278 | Nguyễn Thị Ngọc Như | [nhuntn](https://github.com/) | 24521278@gm.uit.edu.vn |
 
 ## Đồ án cuối kì
 
