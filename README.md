@@ -1,4 +1,4 @@
-<img width="1019" height="274" alt="{3644BAF5-582E-40E8-8A6C-AB9B6A36B803}" src="https://github.com/user-attachments/assets/8914f80b-dcc5-42bf-a44b-798306bf975f" /># SE104___NhapmonCongnghePhanmem
+# SE104___NhapmonCongnghePhanmem
 
 ## Giới thiệu môn học
 
