@@ -1,4 +1,4 @@
-# align="center" SE104 - Nhập môn Công nghệ Phần mềm
+<h1 align="center"> SE104 - Nhập môn Công nghệ Phần mềm
 
 ## Giới thiệu môn học
 
