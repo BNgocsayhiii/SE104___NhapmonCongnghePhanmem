@@ -9,11 +9,15 @@
 
 ## Thành viên nhóm
 
+<div align="center">
+
 | STT | MSSV | Họ và Tên | GitHub | Email |
 | :---: | :---: | :--- | :--- | :--- |
 | 1 | 24521163 | Trần Bảo Ngọc | [BNgocsayhiii](https://github.com/BNgocsayhiii) | 24521163@gm.uit.edu.vn |
 | 2 | 24520433 | Trương Vân Hà | [](https://github.com/) | 24520433@gm.uit.edu.vn |
 | 3 | 24521278 | Nguyễn Thị Ngọc Như | [nhuntn](https://github.com/nhuntn) | 24521278@gm.uit.edu.vn |
+
+</div>
 
 ## Đồ án cuối kì
 
