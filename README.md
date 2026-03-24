@@ -1,3 +1,4 @@
+[![VNUHCM-UIT Logo](đường_dẫn_đến_ảnh_của_bạn)](https://www.uit.edu.vn/)
 <h1 align="center"> SE104 - Nhập môn Công nghệ Phần mềm
 
 ## Giới thiệu môn học
