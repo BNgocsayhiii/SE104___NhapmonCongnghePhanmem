@@ -25,6 +25,11 @@
 
 ## Đồ án cuối kì
 
-* **Đề tài:** 
-* **Mô tả tổng quan:** 
-* **Công cụ & Thư viện:** 
+* **Đề tài:** Phát triển Website Quản lý Siêu thị Trái cây
+* **Mô tả tổng quan:** Hệ thống quản lý bán lẻ trái cây tích hợp quản lý kho theo lô, bán hàng đa kênh (POS & Online), báo cáo doanh thu và gợi ý nhập hàng bằng AI
+* **Công cụ:**
+  * IDE: Visual Studio Code
+  * Quản lý phiên bản: Git & GitHub
+  * Database GUI: Supabase Dashboard
+  * Runtime: Node.js v24
+* **Thư viện:** Next.js 15, TypeScript, Tailwind CSS, Prisma ORM, PostgreSQL, Supabase
