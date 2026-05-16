@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       user: { id: user.id, username: user.username, role: user.role, fullName: user.fullName },
     })
 
-    response.cookies.set('token', token, {
+    response.cookies.set('token', token, {  
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
