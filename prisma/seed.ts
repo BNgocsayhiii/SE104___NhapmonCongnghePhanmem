@@ -1,26 +1,33 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, BatchStatus } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('⏳ Đang xóa dữ liệu cũ...')
-  // Xóa theo thứ tự từ bảng con đến bảng cha để tránh lỗi Khóa ngoại (Foreign Key)
+  
+  // Xóa theo thứ tự từ bảng con (chứa khóa ngoại) đến bảng cha để tránh lỗi ràng buộc
   await prisma.invoiceItem.deleteMany()
+  await prisma.pointTransaction.deleteMany() 
   await prisma.invoice.deleteMany()
+  await prisma.stockAdjustment.deleteMany()  
   await prisma.wasteLog.deleteMany()
   await prisma.batch.deleteMany()
-  await prisma.importReceipt.deleteMany() // <-- Bảng mới
+  await prisma.importReceipt.deleteMany()
+  await prisma.promotion.deleteMany()        
   await prisma.product.deleteMany()
-  await prisma.category.deleteMany()      // <-- Bảng mới
+  await prisma.category.deleteMany()
   await prisma.supplier.deleteMany()
   await prisma.customer.deleteMany()
+  await prisma.session.deleteMany()          
+  await prisma.workShift.deleteMany() // 🌟 MỚI: Xóa lịch làm việc cũ
+  await prisma.auditLog.deleteMany()  // 🌟 MỚI: Xóa nhật ký hệ thống cũ
   await prisma.user.deleteMany()
 
   console.log('🌱 Đang tạo dữ liệu mới...')
 
   // ==========================================
-  // 1. TẠO USERS (3 Vai trò)
+  // 1. TẠO USERS
   // ==========================================
   const defaultPassword = await bcrypt.hash('123456', 10)
 
@@ -35,7 +42,7 @@ async function main() {
   })
 
   // ==========================================
-  // 2. TẠO CATEGORIES (Bảng mới: Danh mục)
+  // 2. TẠO CATEGORIES
   // ==========================================
   const catNoiDia = await prisma.category.create({
     data: { name: 'Nội địa', description: 'Trái cây đặc sản các vùng miền Việt Nam' }
@@ -45,35 +52,21 @@ async function main() {
   })
 
   // ==========================================
-  // 3. TẠO SUPPLIERS (2 nhà cung cấp)
+  // 3. TẠO SUPPLIERS
   // ==========================================
   const suppliers = await Promise.all([
-    prisma.supplier.create({ // Chuyên hàng nội địa [0]
-      data: { name: 'CTY Nông Sản Việt', contactName: 'Anh Bình', phone: '0811111111', address: 'Tiền Giang' },
-    }),
-    prisma.supplier.create({ // Chuyên hàng nhập khẩu [1]
-      data: { name: 'K-Fruit Import', contactName: 'Mr. Lee', phone: '0822222222', address: 'Quận 7, TP.HCM' },
-    }),
+    prisma.supplier.create({ data: { name: 'CTY Nông Sản Việt', contactName: 'Anh Bình', phone: '0811111111', address: 'Tiền Giang' } }),
+    prisma.supplier.create({ data: { name: 'K-Fruit Import', contactName: 'Mr. Lee', phone: '0822222222', address: 'Quận 7, TP.HCM' } }),
   ])
 
   // ==========================================
-  // 4. TẠO PRODUCTS (Thay String category thành categoryId)
+  // 4. TẠO PRODUCTS
   // ==========================================
   const productsData = [
-    // --- Hàng Nhập Khẩu ---
     { sku: '89300001', name: 'Táo Rockit New Zealand', unit: 'Ống', currentPrice: 135000, evaporationRate: 0.01, shelfLifeDays: 30, categoryId: catNhapKhau.id },
     { sku: '89300002', name: 'Nho xanh Autumn Crisp Mỹ', unit: 'kg', currentPrice: 280000, evaporationRate: 0.03, shelfLifeDays: 14, categoryId: catNhapKhau.id },
-    { sku: '89300004', name: 'Cherry Đỏ Mỹ Size 9', unit: 'kg', currentPrice: 450000, evaporationRate: 0.02, shelfLifeDays: 10, categoryId: catNhapKhau.id },
-    { sku: '89300006', name: 'Cam Vàng Navel Úc', unit: 'kg', currentPrice: 95000, evaporationRate: 0.015, shelfLifeDays: 20, categoryId: catNhapKhau.id },
-    { sku: '89300007', name: 'Kiwi Vàng Zespri', unit: 'kg', currentPrice: 185000, evaporationRate: 0.02, shelfLifeDays: 15, categoryId: catNhapKhau.id },
-    { sku: '89300008', name: 'Lê Hàn Quốc', unit: 'kg', currentPrice: 120000, evaporationRate: 0.01, shelfLifeDays: 25, categoryId: catNhapKhau.id },
-    // --- Hàng Nội Địa ---
     { sku: '89300003', name: 'Xoài Cát Hòa Lộc', unit: 'kg', currentPrice: 85000, evaporationRate: 0.025, shelfLifeDays: 7, categoryId: catNoiDia.id },
-    { sku: '89300005', name: 'Dưa Lưới Taki', unit: 'kg', currentPrice: 65000, evaporationRate: 0.015, shelfLifeDays: 10, categoryId: catNoiDia.id },
-    { sku: '89300009', name: 'Sầu Riêng Ri6 Hạt Lép', unit: 'kg', currentPrice: 150000, evaporationRate: 0.03, shelfLifeDays: 5, categoryId: catNoiDia.id },
-    { sku: '89300010', name: 'Dâu Tây Mộc Châu', unit: 'Hộp', currentPrice: 220000, evaporationRate: 0.04, shelfLifeDays: 4, categoryId: catNoiDia.id },
-    { sku: '89300011', name: 'Bơ 034 Đắk Lắk', unit: 'kg', currentPrice: 55000, evaporationRate: 0.035, shelfLifeDays: 6, categoryId: catNoiDia.id },
-    { sku: '89300012', name: 'Măng Cụt Cái Mơn', unit: 'kg', currentPrice: 75000, evaporationRate: 0.02, shelfLifeDays: 8, categoryId: catNoiDia.id },
+    { sku: '89300004', name: 'Dâu Tây Mộc Châu', unit: 'Hộp', currentPrice: 220000, evaporationRate: 0.04, shelfLifeDays: 4, categoryId: catNoiDia.id },
   ]
 
   const products = []
@@ -82,64 +75,71 @@ async function main() {
   }
 
   // ==========================================
-  // 5. TẠO IMPORT RECEIPTS (Bảng mới: Phiếu nhập kho)
-  // ==========================================
-  const receiptNoiDia = await prisma.importReceipt.create({
-    data: {
-      receiptCode: 'PN-2605-001',
-      supplierId: suppliers[0].id, // CTY Nông Sản Việt
-      totalAmount: 25000000,       // Tổng tiền công nợ toa hàng này
-      receivedById: warehouseStaff.id,
-      note: 'Nhập chuyến xe tải nội địa định kỳ',
-    }
-  })
-
-  const receiptNhapKhau = await prisma.importReceipt.create({
-    data: {
-      receiptCode: 'PN-2605-002',
-      supplierId: suppliers[1].id, // K-Fruit Import
-      totalAmount: 85000000,       // Tổng tiền công nợ toa hàng này
-      receivedById: warehouseStaff.id,
-      note: 'Nhập container lạnh từ cảng Cát Lái',
-    }
-  })
-
-  // ==========================================
-  // 6. TẠO BATCHES (Gắn vào Phiếu Nhập thay vì gắn thẳng vào Supplier)
+  // 5. TẠO PROMOTIONS
   // ==========================================
   const today = new Date()
+  const promoNearExpiry = await prisma.promotion.create({
+    data: {
+      name: 'Xả hàng cận date',
+      description: 'Giảm 30% cho tất cả trái cây chuẩn bị hết hạn',
+      discountPercent: 30,
+      applyToStatus: 'NEAR_EXPIRY',
+      startDate: new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000), 
+      endDate: new Date(today.getTime() + 10 * 24 * 60 * 60 * 1000),  
+      isActive: true
+    }
+  })
+
+  // ==========================================
+  // 6. TẠO IMPORT RECEIPTS
+  // ==========================================
+  const receiptNoiDia = await prisma.importReceipt.create({
+    data: { receiptCode: 'PN-2605-001', supplierId: suppliers[0].id, totalAmount: 25000000, receivedById: warehouseStaff.id, note: 'Nhập hàng nội địa' }
+  })
+  const receiptNhapKhau = await prisma.importReceipt.create({
+    data: { receiptCode: 'PN-2605-002', supplierId: suppliers[1].id, totalAmount: 85000000, receivedById: warehouseStaff.id, note: 'Nhập container lạnh' }
+  })
+
+  // ==========================================
+  // 7. TẠO BATCHES
+  // ==========================================
   const batches = []
-  
   for (let i = 0; i < products.length; i++) {
     const product = products[i]
-    
-    // Gắn đúng phiếu nhập: Hàng nhập khẩu vào Phiếu 2, Hàng nội địa vào Phiếu 1
     const importReceiptId = product.categoryId === catNhapKhau.id ? receiptNhapKhau.id : receiptNoiDia.id
     
-    let daysAgo = Math.floor(Math.random() * 5) + 1; 
-    if (i === 6) daysAgo = 10; 
-    if (i === 9) daysAgo = 3;  
+    let daysAgo = 1; 
+    if (i === 2) daysAgo = 6; // Xoài nhập 6 ngày trước -> shelfLife 7 ngày -> Cận date
+    if (i === 3) daysAgo = 5; // Dâu nhập 5 ngày trước -> shelfLife 4 ngày -> Hết hạn
 
     const packagedAt = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000)
     const expiredAt = new Date(packagedAt.getTime() + product.shelfLifeDays * 24 * 60 * 60 * 1000)
     
-    let status = 'FRESH'
+    let status: BatchStatus = 'FRESH'
     const daysLeft = (expiredAt.getTime() - today.getTime()) / (1000 * 3600 * 24)
     if (daysLeft < 0) status = 'EXPIRED'
     else if (daysLeft <= 2) status = 'NEAR_EXPIRY'
+
+    const quantity = 100
+    const remaining = Math.floor(Math.random() * 50) + 20 
+    
+    const lossPercentage = product.evaporationRate * daysAgo
+    let effectiveRemaining = remaining * (1 - lossPercentage)
+    if (effectiveRemaining < 0) effectiveRemaining = 0
 
     batches.push(
       await prisma.batch.create({
         data: {
           batchCode: `L-2605-${(i+1).toString().padStart(3, '0')}`,
           productId: product.id,
-          importReceiptId: importReceiptId, // <-- Đổi dòng này (thay cho supplierId)
-          quantity: 100,
-          remaining: Math.floor(Math.random() * 80) + 10,
+          importReceiptId,
+          quantity,
+          remaining,
+          effectiveRemaining: parseFloat(effectiveRemaining.toFixed(2)), 
           importPrice: product.currentPrice * 0.6,
           packagedAt,
           expiredAt,
-          status: status as any,
+          status, 
           createdById: warehouseStaff.id,
         }
       })
@@ -147,62 +147,163 @@ async function main() {
   }
 
   // ==========================================
-  // 7. TẠO CUSTOMERS (Khách hàng)
+  // 8. TẠO CUSTOMERS
   // ==========================================
-  const customers = await Promise.all([
-    prisma.customer.create({ data: { name: 'Phạm Thị Lan', phone: '0987654321', points: 0, address: 'Q3, TP.HCM' } }),
-    prisma.customer.create({ data: { name: 'Lý Hải', phone: '0912345678', points: 0, email: 'lyhai@gmail.com' } }),
-    prisma.customer.create({ data: { name: 'Khách Vãng Lai', phone: '0000000000', points: 0 } }),
-    prisma.customer.create({ data: { name: 'Chị Lan Anh', phone: '0911222333', email: 'lananh@email.com', address: 'Quận 1, TP.HCM', points: 0 } }),
-    prisma.customer.create({ data: { name: 'Anh Minh Tuấn', phone: '0988777666', email: 'tuanminh@email.com', address: '123 Lê Lợi, Hà Nội', points: 0 } }),
-    prisma.customer.create({ data: { name: 'Cô Hồng', phone: '0901112233', address: 'Quận Tân Bình, TP.HCM', points: 0 } }),
-    prisma.customer.create({ data: { name: 'Anh Đức', phone: '0934567890', email: 'duc.nguyen@email.com', address: 'Hải Châu, Đà Nẵng', points: 0 } }),
-    prisma.customer.create({ data: { name: 'Văn phòng ABC', phone: '02838123456', email: 'office@abc.vn', address: 'Tòa nhà Bitexco, Quận 1', points: 0 } }),
-  ])
+  const customer1 = await prisma.customer.create({ data: { name: 'Phạm Thị Lan', phone: '0987654321', points: 150, address: 'Q3, TP.HCM' } })
 
   // ==========================================
-  // 8. TẠO INVOICES & INVOICE ITEMS (Hóa đơn)
+  // 9. TẠO INVOICES & POINT TRANSACTIONS
   // ==========================================
-  await prisma.invoice.create({
+  // Đơn hàng 1: Mua bình thường tại quầy (Không khuyến mãi)
+  const invoice1 = await prisma.invoice.create({
     data: {
-      invoiceCode: 'INV-001', customerId: customers[1].id, createdById: salesStaff.id, channel: 'POS', paymentMethod: 'QR', status: 'PAID',
-      totalAmount: 430000, discount: 0, finalAmount: 430000,
+      invoiceCode: 'INV-001', customerId: customer1.id, createdById: salesStaff.id, channel: 'POS', paymentMethod: 'QR', status: 'PAID',
+      totalAmount: 270000, discountPercent: 0, discount: 0, pointsUsed: 0, finalAmount: 270000,
       items: {
         create: [
-          { productId: products[0].id, batchId: batches[0].id, quantity: 2, unitPrice: products[0].currentPrice, subtotal: products[0].currentPrice * 2 },
-          { productId: products[8].id, batchId: batches[8].id, quantity: 1.5, unitPrice: products[8].currentPrice, subtotal: products[8].currentPrice * 1.5 } 
+          { 
+            productId: products[0].id, 
+            batchId: batches[0].id, 
+            quantity: 2, 
+            unitPrice: products[0].currentPrice, 
+            subtotal: products[0].currentPrice * 2,
+            discountAmount: 0 
+          }
         ]
       }
     }
   })
-
-  await prisma.invoice.create({
-    data: {
-      invoiceCode: 'INV-002', customerId: customers[2].id, createdById: null, channel: 'ONLINE', paymentMethod: 'BANK_TRANSFER', status: 'DELIVERED',
-      shippingAddress: 'Tòa nhà Bitexco, Q1, TP.HCM', shippingFee: 30000, trackingCode: 'GHTK-9999',
-      totalAmount: 280000, discount: 0, finalAmount: 310000,
-      items: {
-        create: [
-          { productId: products[1].id, batchId: batches[1].id, quantity: 1, unitPrice: products[1].currentPrice, subtotal: products[1].currentPrice * 1 }
-        ]
-      }
-    }
-  })
-
-  // ==========================================
-  // 9. TẠO WASTE LOGS (Hao hụt & Tiêu hủy)
-  // ==========================================
-  const expiredBatch = batches.find(b => b.status === 'EXPIRED') || batches[6] 
   
-  await prisma.wasteLog.create({
-    data: { batchId: expiredBatch.id, quantity: 3.5, reason: 'EXPIRED', note: 'Quả bị nẫu, không đạt chất lượng', createdById: warehouseStaff.id }
+  await prisma.pointTransaction.create({
+    data: { customerId: customer1.id, invoiceId: invoice1.id, delta: 27, reason: 'Tích điểm mua hàng INV-001' }
   })
 
-  await prisma.wasteLog.create({
-    data: { batchId: batches[9].id, quantity: 1, reason: 'DAMAGED', note: 'Hộp dâu bị dập nát trong quá trình vận chuyển', createdById: warehouseStaff.id }
+  // Đơn hàng 2: Đặt hàng Online tiêu điểm tích lũy
+  const invoice2 = await prisma.invoice.create({
+    data: {
+      invoiceCode: 'INV-002', customerId: customer1.id, createdById: null, channel: 'ONLINE', paymentMethod: 'BANK_TRANSFER', status: 'DELIVERED',
+      shippingAddress: 'Tòa nhà Bitexco, Q1', shippingFee: 30000, trackingCode: 'GHTK-9999',
+      totalAmount: 280000, discountPercent: 0, discount: 50000, pointsUsed: 50, finalAmount: 260000, 
+      items: {
+        create: [
+          { 
+            productId: products[1].id, 
+            batchId: batches[1].id, 
+            quantity: 1, 
+            unitPrice: products[1].currentPrice, 
+            subtotal: products[1].currentPrice * 1,
+            discountAmount: 0
+          }
+        ]
+      }
+    }
   })
 
-  console.log('✅ Seed dữ liệu (Hệ thống Ultimate) thành công!')
+  await prisma.pointTransaction.create({
+    data: { customerId: customer1.id, invoiceId: invoice2.id, delta: -50, reason: 'Tiêu điểm cho đơn hàng INV-002' }
+  })
+
+  // 🌟 MỚI - Đơn hàng 3: Áp dụng chi tiết Khuyến mãi xả hàng Lô Cận Date (Xoài Cát - batches[2])
+  const xoaiProduct = products[2]
+  const xoaiBatch = batches[2] // Lô NEAR_EXPIRY
+  const purchaseQty = 2
+  const discPerUnit = xoaiProduct.currentPrice * 0.3 // Giảm 30% = 25,500đ/kg
+  const promotionalPrice = xoaiProduct.currentPrice - discPerUnit // Giá sau giảm = 59,500đ
+  const itemSubtotal = promotionalPrice * purchaseQty // 119,000đ
+  const totalItemDiscount = discPerUnit * purchaseQty // 51,000đ
+
+  const invoice3 = await prisma.invoice.create({
+    data: {
+      invoiceCode: 'INV-003', customerId: customer1.id, createdById: salesStaff.id, channel: 'POS', paymentMethod: 'CASH', status: 'PAID',
+      totalAmount: xoaiProduct.currentPrice * purchaseQty, // 170000 (Gốc)
+      discountPercent: 30, discount: totalItemDiscount, pointsUsed: 0, finalAmount: itemSubtotal,
+      items: {
+        create: [
+          {
+            productId: xoaiProduct.id,
+            batchId: xoaiBatch.id,
+            quantity: purchaseQty,
+            unitPrice: promotionalPrice,
+            subtotal: itemSubtotal,
+            discountAmount: totalItemDiscount, // Lưu vết số tiền giảm của dòng này
+            promotionId: promoNearExpiry.id     // Liên kết trực tiếp chương trình khuyến mãi
+          }
+        ]
+      }
+    }
+  })
+
+  await prisma.pointTransaction.create({
+    data: { customerId: customer1.id, invoiceId: invoice3.id, delta: 11, reason: 'Tích điểm mua hàng INV-003' }
+  })
+
+  // ==========================================
+  // 10. TẠO STOCK ADJUSTMENT
+  // ==========================================
+  await prisma.stockAdjustment.create({
+    data: {
+      batchId: batches[0].id,
+      before: batches[0].remaining, 
+      after: batches[0].remaining - 1, 
+      delta: -1, 
+      reason: 'Kiểm kê phát hiện hao hụt mất 1 ống Táo Rockit',
+      createdById: warehouseStaff.id
+    }
+  })
+
+  // ==========================================
+  // 11. TẠO WASTE LOGS
+  // ==========================================
+  const expiredBatch = batches.find(b => b.status === 'EXPIRED') || batches[3] 
+  await prisma.wasteLog.create({
+    data: { batchId: expiredBatch.id, quantity: 3.5, reason: 'EXPIRED', note: 'Dâu mốc trắng, đem tiêu hủy khỏi kệ', createdById: warehouseStaff.id }
+  })
+
+  // ==========================================
+  // 12. 🌟 MỚI: TẠO WORK SHIFTS (CA LÀM VIỆC)
+  // ==========================================
+  await prisma.workShift.createMany({
+    data: [
+      {
+        userId: salesStaff.id,
+        date: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+        shiftType: 'MORNING',
+        status: 'COMPLETED'
+      },
+      {
+        userId: warehouseStaff.id,
+        date: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+        shiftType: 'AFTERNOON',
+        status: 'SCHEDULED'
+      }
+    ]
+  })
+
+  // ==========================================
+  // 13. 🌟 MỚI: TẠO AUDIT LOGS (NHẬT KÝ HỆ THỐNG)
+  // ==========================================
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        userId: manager.id,
+        action: 'UPDATE_PRODUCT_PRICE',
+        target: 'Product',
+        targetId: products[0].id,
+        oldValue: JSON.stringify({ currentPrice: 130000 }),
+        newValue: JSON.stringify({ currentPrice: 135000 })
+      },
+      {
+        userId: warehouseStaff.id,
+        action: 'ADJUST_STOCK_INVENTORY',
+        target: 'Batch',
+        targetId: batches[0].id,
+        oldValue: JSON.stringify({ remaining: batches[0].remaining }),
+        newValue: JSON.stringify({ remaining: batches[0].remaining - 1 })
+      }
+    ]
+  })
+
+  console.log('✅ Seed dữ liệu thành công hoàn toàn theo cấu trúc mới!')
 }
 
 main()

@@ -22,12 +22,27 @@ model User {
   status    UserStatus @default(ACTIVE)
   createdAt DateTime   @default(now())
 
-  invoices       Invoice[]       // Đơn hàng xuất bán
-  wasteLogs      WasteLog[]      // Phiếu hủy hàng
-  importReceipts ImportReceipt[] // Phiếu nhập kho đã duyệt
-  batches        Batch[]         // Phụ trách trực tiếp đóng gói lô
+  invoices         Invoice[]         // Đơn hàng xuất bán
+  wasteLogs        WasteLog[]        // Phiếu hủy hàng
+  importReceipts   ImportReceipt[]   // Phiếu nhập kho đã duyệt
+  batches          Batch[]           // Phụ trách trực tiếp đóng gói lô
+  sessions         Session[]         // Quản lý đăng nhập
+  stockAdjustments StockAdjustment[] // Lịch sử điều chỉnh tồn kho
+  workShifts       WorkShift[]       // 🌟 SỬA LỖI: Thêm quan hệ ngược cho Ca làm việc
+  auditLogs        AuditLog[]        // 🌟 SỬA LỖI: Thêm quan hệ ngược cho Nhật ký hệ thống
 
   @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("sessions")
 }
 
 enum Role {
@@ -45,12 +60,12 @@ enum UserStatus {
 // 2. DANH MỤC & SẢN PHẨM (Tích hợp E-Commerce)
 // ==========================================
 model Category {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  description String?   @db.Text
-  createdAt   DateTime  @default(now())
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
 
-  products    Product[]
+  products Product[]
 
   @@map("categories")
 }
@@ -73,8 +88,9 @@ model Product {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  batches         Batch[]
-  invoiceItems    InvoiceItem[]
+  batches      Batch[]
+  invoiceItems InvoiceItem[]
+  promotions   Promotion[]   // Khuyến mãi áp dụng riêng cho sản phẩm
 
   @@map("products")
 }
@@ -102,53 +118,58 @@ model Supplier {
 }
 
 model ImportReceipt {
-  id           String   @id @default(cuid())
-  receiptCode  String   @unique // Mã phiếu nhập (Vd: PN-2605-001)
+  id          String   @id @default(cuid())
+  receiptCode String   @unique // Mã phiếu nhập (Vd: PN-2605-001)
   
-  supplierId   String
-  supplier     Supplier @relation(fields: [supplierId], references: [id])
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
   
-  totalAmount  Float    // Tổng tiền công nợ với nhà cung cấp
-  note         String?  @db.Text
+  totalAmount Float    // Tổng tiền công nợ với nhà cung cấp
+  note        String?  @db.Text
   
   receivedById String
   receivedBy   User     @relation(fields: [receivedById], references: [id])
   
-  createdAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
 
-  batches      Batch[]  // 1 Phiếu nhập sẽ bao gồm nhiều Lô hàng (Batches)
+  batches Batch[] // 1 Phiếu nhập sẽ bao gồm nhiều Lô hàng (Batches)
 
   @@map("import_receipts")
 }
 
 // ==========================================
-// 4. LÔ HÀNG (Core Logic - FIFO)
+// 4. LÔ HÀNG (Core Logic - FIFO & Hao hụt)
 // ==========================================
 model Batch {
-  id              String        @id @default(cuid())
-  batchCode       String        @unique // QR Code dán lên thùng
+  id                 String        @id @default(cuid())
+  batchCode          String        @unique // QR Code dán lên thùng
   
-  importReceiptId String
-  importReceipt   ImportReceipt @relation(fields: [importReceiptId], references: [id], onDelete: Cascade)
+  importReceiptId    String
+  importReceipt      ImportReceipt @relation(fields: [importReceiptId], references: [id], onDelete: Cascade)
   
-  productId       String
-  product         Product       @relation(fields: [productId], references: [id])
+  productId          String
+  product            Product       @relation(fields: [productId], references: [id])
   
-  quantity        Float         // Số lượng nhập
-  remaining       Float         // Tồn kho thực tế
-  importPrice     Float         // Giá vốn nhập vào
+  quantity           Float         // Số lượng nhập ban đầu
+  remaining          Float         // Tồn kho trên sổ sách
+  effectiveRemaining Float         // Tồn kho thực tế
+  importPrice        Float         // Giá vốn nhập vào
   
-  packagedAt      DateTime      // Ngày đóng gói
-  expiredAt       DateTime      // HSD = packagedAt + shelfLifeDays
-  status          BatchStatus   @default(FRESH)
+  packagedAt         DateTime      // Ngày đóng gói
+  expiredAt          DateTime      // HSD = packagedAt + shelfLifeDays
+  status             BatchStatus   @default(FRESH)
   
-  createdAt       DateTime      @default(now())
-  createdBy       User          @relation(fields: [createdById], references: [id])
-  createdById     String
+  createdAt          DateTime      @default(now())
+  createdById        String
+  createdBy          User          @relation(fields: [createdById], references: [id])
 
-  invoiceItems    InvoiceItem[]
-  wasteLogs       WasteLog[]
+  invoiceItems     InvoiceItem[]
+  wasteLogs        WasteLog[]
+  stockAdjustments StockAdjustment[]
 
+  @@index([status])
+  @@index([expiredAt])
+  @@index([productId])
   @@map("batches")
 }
 
@@ -160,37 +181,101 @@ enum BatchStatus {
 }
 
 // ==========================================
-// 5. KHÁCH HÀNG (CRM)
+// 5. ĐIỀU CHỈNH KHO (Kiểm kê thực tế)
+// ==========================================
+model StockAdjustment {
+  id          String   @id @default(cuid())
+  
+  batchId     String
+  batch       Batch    @relation(fields: [batchId], references: [id])
+  
+  before      Float    // Số lượng trước kiểm kê
+  after       Float    // Số lượng thực tế sau kiểm kê
+  delta       Float    // Độ chênh lệch (after - before)
+  reason      String   // Lý do lệch (Ví dụ: "Khách trộm", "Cân sai")
+  
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("stock_adjustments")
+}
+
+// ==========================================
+// 6. KHÁCH HÀNG & TÍCH ĐIỂM (CRM)
 // ==========================================
 model Customer {
   id        String   @id @default(cuid())
   name      String
   phone     String   @unique
   email     String?  @unique // Email login Web
-  password  String?          // Pass login Web
+  password  String?           // Pass login Web
   address   String?
   points    Int      @default(0)
   createdAt DateTime @default(now())
 
-  invoices  Invoice[]
+  invoices          Invoice[]
+  pointTransactions PointTransaction[]
 
   @@map("customers")
 }
 
+model PointTransaction {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  
+  delta       Int      // +điểm tích, -điểm tiêu
+  reason      String   // Mô tả: "Mua hàng INV-001", "Đổi quà"
+  
+  invoiceId   String?
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id])
+  
+  createdAt   DateTime @default(now())
+
+  @@map("point_transactions")
+}
+
 // ==========================================
-// 6. HÓA ĐƠN & GIAO DỊCH (Đa kênh - Omnichannel)
+// 7. KHUYẾN MÃI & CHIẾT KHẤU
+// ==========================================
+model Promotion {
+  id              String       @id @default(cuid())
+  name            String       // Tên chương trình (VD: "Xả hàng dâu tây cận date")
+  description     String?      @db.Text
+  discountPercent Float        // % Giảm giá
+  
+  productId       String?      // Áp dụng cho 1 sản phẩm cụ thể (Null = áp dụng tất cả)
+  product         Product?     @relation(fields: [productId], references: [id])
+  
+  applyToStatus   BatchStatus? // VD: Chỉ giảm giá nếu lô hàng có trạng thái NEAR_EXPIRY
+  
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+
+  invoiceItems    InvoiceItem[] // 🌟 SỬA LỖI: Thêm quan hệ ngược cho Chi tiết hóa đơn áp dụng KM
+
+  @@map("promotions")
+}
+
+// ==========================================
+// 8. HÓA ĐƠN & GIAO DỊCH (Đa kênh - Omnichannel)
 // ==========================================
 model Invoice {
   id              String        @id @default(cuid())
   invoiceCode     String        @unique // Vd: INV-2605-001
   
-  customer        Customer?     @relation(fields: [customerId], references: [id])
   customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
   
-  totalAmount     Float
-  discount        Float         @default(0)
+  totalAmount     Float         // Tổng tiền gốc
+  discountPercent Float         @default(0) // % Giảm giá áp dụng
+  discount        Float         @default(0) // Số tiền giảm giá
+  pointsUsed      Int           @default(0) // Số điểm khách đã tiêu cho đơn này
   shippingFee     Float         @default(0) // Phí ship Online
-  finalAmount     Float
+  finalAmount     Float         // Tiền khách phải trả cuối cùng
   
   paymentMethod   PaymentMethod @default(CASH)
   channel         SaleChannel   @default(POS)
@@ -200,11 +285,14 @@ model Invoice {
   trackingCode    String?       // Mã vận đơn GHTK/Viettel
   
   createdAt       DateTime      @default(now())
-  createdBy       User?         @relation(fields: [createdById], references: [id])
   createdById     String?       // Khách tự đặt Online sẽ là Null
+  createdBy       User?         @relation(fields: [createdById], references: [id])
 
-  items           InvoiceItem[]
+  items             InvoiceItem[]
+  pointTransactions PointTransaction[]
 
+  @@index([createdAt])
+  @@index([status])
   @@map("invoices")
 }
 
@@ -231,51 +319,101 @@ enum InvoiceStatus {
 }
 
 // ==========================================
-// 7. CHI TIẾT HÓA ĐƠN
+// 9. CHI TIẾT HÓA ĐƠN
 // ==========================================
 model InvoiceItem {
-  id        String  @id @default(cuid())
+  id             String     @id @default(cuid())
   
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId String
+  invoiceId      String
+  invoice        Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   
-  product   Product @relation(fields: [productId], references: [id])
-  productId String
+  productId      String
+  product        Product    @relation(fields: [productId], references: [id])
   
-  batch     Batch   @relation(fields: [batchId], references: [id])
-  batchId   String
-  
-  quantity  Float
-  unitPrice Float   // Giá chốt tại thời điểm mua
-  subtotal  Float
+  batchId        String
+  batch          Batch      @relation(fields: [batchId], references: [id])
+  discountAmount Float      @default(0) // Số tiền được giảm riêng cho mặt hàng này
+  promotionId    String?
+  promotion      Promotion? @relation(fields: [promotionId], references: [id])
+  quantity       Float
+  unitPrice      Float      // Giá chốt tại thời điểm mua
+  subtotal       Float
 
   @@map("invoice_items")
 }
 
 // ==========================================
-// 8. LOG HAO HỤT & HỦY HÀNG
+// 10. LOG HAO HỤT & HỦY HÀNG
 // ==========================================
 model WasteLog {
   id          String      @id @default(cuid())
   
-  batch       Batch       @relation(fields: [batchId], references: [id])
   batchId     String
+  batch       Batch       @relation(fields: [batchId], references: [id])
   
   quantity    Float
   reason      WasteReason
   note        String?     @db.Text
   
-  createdAt   DateTime    @default(now())
-  createdBy   User        @relation(fields: [createdById], references: [id])
   createdById String
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  createdAt   DateTime    @default(now())
 
   @@map("waste_logs")
 }
 
 enum WasteReason {
-  EXPIRED     // Hết hạn
-  DAMAGED     // Hư hỏng/Bầm dập
-  BIOLOGICAL  // Hao hụt sinh học (bay hơi nước)
-  PROMOTION   // Cắt làm Sampling (Dùng thử)
+  EXPIRED      // Hết hạn
+  DAMAGED      // Hư hỏng/Bầm dập
+  BIOLOGICAL   // Hao hụt sinh học (bay hơi nước)
+  PROMOTION    // Cắt làm Sampling (Dùng thử)
   OTHER
+}
+
+// ==========================================
+// 11. LỊCH LÀM VIỆC NỘI BỘ
+// ==========================================
+model WorkShift {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date      DateTime    @db.Date // Ngày làm việc
+  shiftType ShiftType   // SÁNG, CHIỀU, TỐI
+  status    ShiftStatus @default(SCHEDULED)
+  
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([userId, date, shiftType])
+  @@map("work_shifts")
+}
+
+enum ShiftType {
+  MORNING   // 06:00 - 14:00
+  AFTERNOON // 14:00 - 22:00
+  EVENING   // 22:00 - 06:00
+}
+
+enum ShiftStatus {
+  SCHEDULED // Đã đăng ký
+  COMPLETED // Đã hoàn thành
+  ABSENT    // Vắng mặt
+}
+
+// ==========================================
+// 12. NHẬT KÝ HỆ THỐNG (AUDIT LOGS)
+// ==========================================
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // Ví dụ: "UPDATE_PRICE", "DEACTIVATE_USER"
+  target    String   // Tên bảng hoặc đối tượng bị tác động (Ví dụ: "Product", "User")
+  targetId  String   // ID của đối tượng bị tác động
+  oldValue  String?  @db.Text // Giá trị cũ (JSON string) nếu cần
+  newValue  String?  @db.Text // Giá trị mới (JSON string) nếu cần
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
 }
