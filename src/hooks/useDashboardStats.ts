@@ -1,11 +1,25 @@
-// hooks/useDashboardStats.ts
 import { useState, useEffect } from 'react'
 
-interface DashboardStats {
-  revenue: { label: string; value: number; formatted: string; orderCount: number }
+export interface ChartData {
+  label: string;
+  value: number;
+}
+
+export interface BestSeller {
+  id: string;
+  name: string;
+  cat: string;
+  sold: number;
+  img: string;
+}
+
+export interface DashboardStats {
+  revenue: { label: string; value: number; formatted: string; orderCount?: number }
   profit: { label: string; value: number; formatted: string }
   expiringSoon: { label: string; value: number; formatted: string }
   lowStock: { label: string; value: number; formatted: string }
+  chartData: ChartData[]
+  bestSellers: BestSeller[]
 }
 
 export function useDashboardStats() {

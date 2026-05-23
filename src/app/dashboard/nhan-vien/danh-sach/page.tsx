@@ -243,8 +243,7 @@ export default function DanhSachNhanVienPage() {
               <div className="relative max-w-sm">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                 <input value={search} onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#60A61F] transition-all bg-white"
-                  placeholder="Tìm kiếm nhân viên..." />
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#60A61F] transition-all bg-white text-gray-900 font-medium placeholder-gray-400"                  placeholder="Tìm kiếm nhân viên..." />
               </div>
             </div>
           )}

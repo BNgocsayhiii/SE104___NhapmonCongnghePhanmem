@@ -12,10 +12,10 @@ const ROLES = {
 }
 
 const PERMISSION_MAP: Record<string, string[]> = {
-  '/dashboard': [ROLES.MANAGER, ROLES.STAFF_SALES, ROLES.STAFF_WAREHOUSE],
+  '/dashboard': [ROLES.MANAGER],
   '/dashboard/kho-hang/nhap-hang': [ROLES.MANAGER, ROLES.STAFF_WAREHOUSE],
   '/dashboard/kho-hang/huy-hang': [ROLES.MANAGER, ROLES.STAFF_WAREHOUSE],
-  '/dashboard/kho-hang/quan-ly': [ROLES.MANAGER, ROLES.STAFF_SALES],
+  '/dashboard/kho-hang/quan-ly': [ROLES.MANAGER, ROLES.STAFF_WAREHOUSE],
   '/dashboard/ban-hang/tao-hoa-don': [ROLES.MANAGER, ROLES.STAFF_SALES],
   '/dashboard/ban-hang/lich-su-ban-hang': [ROLES.MANAGER, ROLES.STAFF_SALES],
   '/dashboard/nhan-vien/danh-sach': [ROLES.MANAGER, ROLES.STAFF_SALES, ROLES.STAFF_WAREHOUSE],
@@ -183,11 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <main className="ft-main">
-        <div className="ft-topbar">
-          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: '#1a4d2e' }}>
-            {currentTitle}
-          </div>
-        </div>
+        {/* Đã dọn dẹp hoàn toàn ft-topbar cũ để tránh lặp tiêu đề */}
         <div className="ft-content">{children}</div>
       </main>
     </div>

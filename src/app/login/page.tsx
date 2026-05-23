@@ -22,11 +22,24 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       })
       const data = await res.json()
+      
       if (!res.ok) {
         setError(data.error)
         return
       }
-      router.push('/dashboard')
+
+      // 🌟 ĐÃ SỬA: Phân quyền điều hướng sau khi đăng nhập thành công
+      const userRole = data.user?.role;
+      
+      if (userRole === 'STAFF_SALES') {
+        router.push('/dashboard/ban-hang/tao-hoa-don');
+      } else if (userRole === 'STAFF_WAREHOUSE') {
+        router.push('/dashboard/kho-hang/quan-ly');
+      } else {
+        // Mặc định MANAGER sẽ vào trang Tổng quan
+        router.push('/dashboard');
+      }
+      
     } catch {
       setError('Không thể kết nối máy chủ')
     } finally {

@@ -1,0 +1,197 @@
+'use client'
+import React from 'react'
+import { useReports, TimeRange } from '@/hooks/useReports'
+
+export default function ReportsPage() {
+  const { data, loading, timeRange, setTimeRange } = useReports()
+
+  const guavaColors = {
+    primary: '#60A61F',
+    textDark: '#1a4d2e',
+    cardBg1: '#CBEFAA',
+    cardBgProfit: '#C8D77C',
+    cardBgWaste: '#FBA685',
+    cardBgStock: '#F5EE9A',
+  }
+
+  const wasteReasonLabels: Record<string, string> = {
+    EXPIRED: 'Hết hạn / Thối hỏng',
+    DAMAGED: 'Hư hỏng / Dập nát do vận chuyển',
+    BIOLOGICAL: 'Hao hụt sinh học (Bay hơi nước)',
+    PROMOTION: 'Hàng cắt ra làm Sampling (Dùng thử)',
+    OTHER: 'Lý do khác'
+  }
+
+  const timeTabs: { id: TimeRange; label: string }[] = [
+    { id: 'day', label: 'Hôm nay' },
+    { id: 'month', label: 'Tháng này' },
+    { id: 'quarter', label: 'Quý này' },
+    { id: 'year', label: 'Năm nay' },
+  ]
+
+  const floatingFruits = [
+    { icon: '🍍', pos: 'top-[12%] left-[4%]', delay: '0s' },
+    { icon: '🍒', pos: 'top-[35%] right-[8%]', delay: '1.5s' },
+    { icon: '🥝', pos: 'bottom-[15%] left-[10%]', delay: '2.2s' },
+  ]
+
+  const maxChannel = Math.max(...(data?.channels.map(c => c.value) || [1]))
+  const maxPayment = Math.max(...(data?.payments.map(p => p.value) || [1]))
+  const totalWaste = data?.summary.totalWasteCost || 1
+  const activeLabel = timeTabs.find(t => t.id === timeRange)?.label
+
+  return (
+    <div className="fade-up p-6 relative min-h-full z-0 bg-transparent">
+      <style jsx global>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap');
+        @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(5deg); } }
+        .floating-fruit { position: absolute; animation: float 6s ease-in-out infinite; opacity: 0.35; font-size: 2rem; }
+      `}</style>
+
+      {/* LỚP TRÁI CÂY NỀN */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[-1]">
+        {floatingFruits.map((fruit, index) => (
+          <span key={index} className={`floating-fruit ${fruit.pos}`} style={{ animationDelay: fruit.delay }}>
+            {fruit.icon}
+          </span>
+        ))}
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto">
+        
+        {/* HEADER & TIME TABS */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-4xl uppercase mb-1">
+              BÁO CÁO KINH DOANH
+            </h1>
+            <p className="text-slate-500 text-sm font-medium">Thống kê dữ liệu cửa hàng chuyên sâu</p>
+          </div>
+
+          {/* Pill Menu Thời gian */}
+          <div className="flex bg-white/80 backdrop-blur-md p-1 rounded-xl shadow-sm border border-slate-200/60 self-start md:self-auto">
+            {timeTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setTimeRange(tab.id)}
+                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${
+                  timeRange === tab.id 
+                    ? 'bg-[#60A61F] text-white shadow-md' 
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 4 Ô Chỉ số Tổng quan */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBg1 }}>
+            {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
+            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Doanh Thu ({activeLabel})</p>
+            <p style={{ color: guavaColors.textDark }} className="text-2xl font-black">
+              {data?.summary.revenue.toLocaleString('vi-VN')} ₫
+            </p>
+            <p className="text-[11px] text-slate-600 mt-2 font-medium">Tổng số đơn: {data?.summary.invoiceCount || 0}</p>
+          </div>
+
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBgProfit }}>
+            {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
+            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Lợi Nhuận Gộp</p>
+            <p style={{ color: guavaColors.textDark }} className="text-2xl font-black">
+              {data?.summary.profit.toLocaleString('vi-VN')} ₫
+            </p>
+            <p className="text-[11px] text-slate-600 mt-2 font-medium">Chưa trừ chi phí vận hành cố định</p>
+          </div>
+
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBgWaste }}>
+            {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
+            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Tổn Thất Hao Hụt</p>
+            <p className="text-2xl font-black text-red-900">
+              {data?.summary.totalWasteCost.toLocaleString('vi-VN')} ₫
+            </p>
+            <p className="text-[11px] text-red-900/80 mt-2 font-medium">Tính dựa trên giá vốn nhập vào</p>
+          </div>
+
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBgStock }}>
+            {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
+            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Giá Trị Kho Tồn</p>
+            <p style={{ color: guavaColors.textDark }} className="text-2xl font-black">
+              {data?.summary.totalInventoryValue.toLocaleString('vi-VN')} ₫
+            </p>
+            <p className="text-[11px] text-slate-600 mt-2 font-medium">Vốn lưu động hiện tại (Cập nhật Real-time)</p>
+          </div>
+        </div>
+
+        {/* Khối Đồ thị Thanh ngang */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          
+          {/* CỘT 1: CƠ CẤU */}
+          <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm relative">
+            {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 rounded-2xl"></div>}
+            <h3 style={{ color: guavaColors.textDark }} className="font-bold text-lg mb-4">📊 Kênh Bán Hàng & Phương Thức</h3>
+            
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Theo kênh phân phối</p>
+            <div className="space-y-3 mb-6">
+              {data?.channels.length === 0 ? <p className="text-xs text-slate-400">Chưa có giao dịch.</p> : data?.channels.map((c, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-xs font-bold mb-1">
+                    <span style={{ color: guavaColors.textDark }}>{c.name === 'POS' ? '🏪 Tại cửa hàng (POS)' : '🌐 Đặt hàng Online Web'}</span>
+                    <span>{c.value.toLocaleString('vi-VN')} ₫</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ backgroundColor: guavaColors.primary, width: `${(c.value / maxChannel) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Theo phương thức thanh toán</p>
+            <div className="space-y-3">
+              {data?.payments.length === 0 ? <p className="text-xs text-slate-400">Chưa có giao dịch.</p> : data?.payments.map((p, i) => (
+                <div key={i}>
+                  <div className="flex justify-between text-xs font-medium mb-1">
+                    <span className="text-slate-700 font-medium">{p.name}</span>
+                    <span className="font-bold">{p.value.toLocaleString('vi-VN')} ₫</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500 rounded-full transition-all duration-700 delay-100" style={{ width: `${(p.value / maxPayment) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CỘT 2: HAO HỤT */}
+          <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm relative">
+            {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 rounded-2xl"></div>}
+            <h3 className="font-bold text-lg mb-2 text-red-900">📉 Phân Tích Nguyên Nhân Hao Hụt</h3>
+            <p className="text-xs text-slate-400 mb-4">Dữ liệu được lọc theo khoảng thời gian được chọn</p>
+            
+            <div className="space-y-4">
+              {data?.waste.length === 0 || totalWaste === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-10 italic">Tuyệt vời! Không ghi nhận hao hụt nào.</p>
+              ) : data?.waste.map((w, i) => {
+                const percent = totalWaste > 0 ? ((w.cost / totalWaste) * 100).toFixed(1) : '0'
+                return (
+                  <div key={i} className="pb-3 border-b border-dashed border-slate-100 last:border-0 last:pb-0">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="font-bold text-slate-700">{wasteReasonLabels[w.reason] || w.reason}</span>
+                      <span className="font-black text-red-800">{w.cost.toLocaleString('vi-VN')} ₫ <span className="text-slate-400 font-normal">({percent}%)</span></span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div className="h-full bg-red-500 rounded-full transition-all duration-700" style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
