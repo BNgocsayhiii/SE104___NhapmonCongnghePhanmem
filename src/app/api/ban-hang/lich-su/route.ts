@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const filterDate = searchParams.get('date') // Format: YYYY-MM-DD
     const filterMonth = searchParams.get('month') // Format: YYYY-MM
 
-    // 3. XÂY DỰNG ĐIỀU KIỆN TRUY VẤN (WHERE CLAUSE)
+    // 3. Xây dựng điều kiện truy vấn (WHERE CLAUSE)
     let whereClause: any = {}
 
     // Tìm kiếm theo Mã HĐ hoặc SĐT/Tên khách hàng
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       ]
     }
 
-    // PHÂN QUYỀN LẤY DỮ LIỆU
+    // Phân quyền lấy dữ liệu
     if (userRole === 'STAFF_SALES') {
       // Nhân viên: Bắt buộc chỉ xem của mình và ngày hôm nay
       whereClause.createdById = userId

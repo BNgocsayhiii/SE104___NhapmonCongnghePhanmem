@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiError, requireSession } from '@/lib/api'
 
 type ReportRange = 'day' | 'month' | 'quarter' | 'year'
 
@@ -64,6 +65,9 @@ function getReportPeriod(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const { response } = await requireSession(req, ['MANAGER'])
+    if (response) return response
+
     const period = getReportPeriod(req)
     const dateFilter = { gte: period.start, lt: period.end }
 
@@ -134,6 +138,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('[GET /api/bao-cao] Error:', error)
-    return NextResponse.json({ success: false, error: 'Không thể tải dữ liệu báo cáo' }, { status: 500 })
+    return apiError('Không thể tải dữ liệu báo cáo')
   }
 }

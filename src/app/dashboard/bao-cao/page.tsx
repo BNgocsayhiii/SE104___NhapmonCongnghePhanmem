@@ -93,7 +93,7 @@ export default function ReportsPage() {
         .floating-fruit { position: absolute; animation: float 6s ease-in-out infinite; opacity: 0.35; font-size: 2rem; }
       `}</style>
 
-      {/* LỚP TRÁI CÂY NỀN */}
+      {/* Lớp trái cây nền */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-[-1]">
         {floatingFruits.map((fruit, index) => (
           <span key={index} className={`floating-fruit ${fruit.pos}`} style={{ animationDelay: fruit.delay }}>

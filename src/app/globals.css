@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.text-slate-400 {
+  color: #64748b;
+}
+
+.text-slate-500 {
+  color: #475569;
+}
+
+.text-gray-400 {
+  color: #6b7280;
+}
+
+.text-gray-500 {
+  color: #4b5563;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}

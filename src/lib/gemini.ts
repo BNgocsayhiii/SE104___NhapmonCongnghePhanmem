@@ -7,16 +7,26 @@ export interface StoreContext {
   inventory: InventoryItem[]
   recentSales: SaleRecord[]
   lowStockThreshold: number
+  reorderSuggestions?: ReorderSuggestion[]
+}
+
+export interface ReorderSuggestion {
+  product: string
+  suggestedQuantity: number
+  unit: string
+  reason: string
+  risk: string
+  priority: 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
 export interface InventoryItem {
   id: string
   name: string
   category: string
-  quantity: number   // kg hoặc đơn vị
+  quantity: number
   unit: string
-  costPrice: number  // giá nhập (₫/kg)
-  sellPrice: number  // giá bán (₫/kg)
+  costPrice: number
+  sellPrice: number
   expiryDate?: string
   supplier?: string
 }
@@ -30,11 +40,9 @@ export interface SaleRecord {
   profit: number
 }
 
-// ── System prompt: Đã tối ưu hóa Token để chạy gói Free ─────────────────────
 export function buildSystemPrompt(ctx: StoreContext): string {
   const lowStock = ctx.inventory.filter((i) => i.quantity <= ctx.lowStockThreshold)
   
-  // Tính số ngày hết hạn chính xác hơn
   const expiringSoon = ctx.inventory.filter((i) => {
     if (!i.expiryDate) return false
     const days = Math.ceil((new Date(i.expiryDate).getTime() - Date.now()) / 86_400_000)
@@ -44,15 +52,12 @@ export function buildSystemPrompt(ctx: StoreContext): string {
   const totalRevenue = ctx.recentSales.reduce((s, r) => s + r.revenue, 0)
   const totalProfit  = ctx.recentSales.reduce((s, r) => s + r.profit, 0)
 
-  // Tối ưu: Chỉ lấy Top 5 mặt hàng bán chạy nhất
   const topSellers = [...ctx.recentSales]
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5)
     .map((r) => `${r.productName} (${r.revenue.toLocaleString('vi-VN')}₫)`)
     .join(', ')
 
-  // TỐI ƯU: Thay vì map toàn bộ danh sách bán hàng thô (gây tốn token), 
-  // chúng ta gom nhóm doanh số theo tên sản phẩm để AI dễ phân tích nhập hàng.
   const salesSummaryMap = new Map<string, { qty: number; rev: number; unit: string }>()
   for (const sale of ctx.recentSales) {
     const existing = salesSummaryMap.get(sale.productName)
@@ -67,10 +72,17 @@ export function buildSystemPrompt(ctx: StoreContext): string {
     .map(([name, stat]) => `- ${name}: đã bán ${stat.qty} ${stat.unit} → doanh thu ${stat.rev.toLocaleString('vi-VN')}₫`)
     .join('\n')
 
-  return `Bạn là trợ lý AI của cửa hàng trái cây FruiTrack. Hãy trả lời ngắn gọn, thực tế, bằng tiếng Việt.
-Khi trình bày danh sách, dùng markdown bullet (- item). Khi trình bày số tiền, dùng định dạng Việt Nam (ví dụ: 1.250.000 ₫).
+  return `Bạn là một trợ lý ảo AI thông minh, cực kỳ thân thiện và cô đọng của cửa hàng trái cây FruiTrack.
 
-=== DỮ LIỆU KHO HIỆN TẠI ===
+HƯỚNG DẪN ỨNG XỬ & VĂN PHONG (BẮT BUỘC):
+1. **Trả lời ngắn gọn, cô đọng, đúng trọng tâm câu hỏi.** Không giải thích rườm rà, không nói dài dòng, không lặp lại ý. 
+2. Khi người dùng hỏi về số liệu, tình hình kinh doanh, hoặc gợi ý nhập hàng, hãy tự động tính toán dựa trên Database bên dưới để đưa ra câu trả lời nhanh, gọn.
+
+QUY TẮC ĐỊNH DẠNG:
+- **TUYỆT ĐỐI KHÔNG sử dụng định dạng bảng (Markdown Table).** Ngay cả khi phân tích hay gợi ý nhập hàng, hãy viết thành các câu ngắn hoặc dùng danh sách dấu đầu dòng (- bullet points) cực kỳ rút gọn.
+- Số tiền dùng định dạng Việt Nam (ví dụ: 195.500 ₫).
+
+=== DỮ LIỆU KHO THỰC TẾ (DÙNG KHI CẦN TRA CỨU) ===
 Tổng số mặt hàng: ${ctx.inventory.length}
 Hàng sắp hết (≤${ctx.lowStockThreshold}):
 ${lowStock.length > 0 ? lowStock.map((i) => `- ${i.name}: còn ${i.quantity} ${i.unit} (giá nhập ${i.costPrice.toLocaleString('vi-VN')}₫/${i.unit}, NCC: ${i.supplier ?? 'chưa rõ'})`).join('\n') : '- Không có'}
@@ -85,27 +97,19 @@ ${ctx.inventory.map((i) => `- ${i.name} (${i.category}): ${i.quantity} ${i.unit}
 Tổng doanh thu: ${totalRevenue.toLocaleString('vi-VN')} ₫
 Tổng lợi nhuận: ${totalProfit.toLocaleString('vi-VN')} ₫
 Top bán chạy: ${topSellers || 'chưa có dữ liệu'}
-
 Tóm tắt tiêu thụ mặt hàng:
 ${salesSummaryStr || '- Chưa có lượt bán nào'}
 
-=== NHIỆM VỤ ===
-Khi được hỏi về tình trạng kho → dựa vào dữ liệu kho ở trên.
-Khi được hỏi về doanh thu → dựa vào tổng doanh thu/lợi nhuận ở trên.
-Khi được yêu cầu gợi ý nhập hàng → ưu tiên đề xuất nhập các mặt hàng nằm trong danh sách "Hàng sắp hết" nhưng có "Tóm tắt tiêu thụ" tốt (bán được nhiều). Đề xuất số lượng thực tế dựa trên sức mua.
-Tuyệt đối không bịa số liệu nằm ngoài ngữ cảnh được cung cấp.`
+Tuyệt đối không bịa số liệu kho bãi hoặc doanh thu nằm ngoài ngữ cảnh được cung cấp.`
 }
 
-// ── Main chat function ─────────────────────────────────────────────────────
-
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent'
 
 export async function chatWithGemini(
   history: ChatMessage[],
   newMessage: string,
   storeContext: StoreContext
 ): Promise<string> {
-  // ĐỔI LẠI: Dùng biến môi trường Server-side chuẩn để bảo mật và tránh lỗi Quota do leak key
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) throw new Error('Thiếu GEMINI_API_KEY trong file .env.local')
 
@@ -120,8 +124,8 @@ export async function chatWithGemini(
       { role: 'user', parts: [{ text: newMessage }] },
     ],
     generationConfig: {
-      temperature: 0.4, // Giảm xuống 0.4 để câu trả lời chính xác, bám sát số liệu hơn, đỡ nói lan man
-      maxOutputTokens: 800,
+      temperature: 0.7, // Tăng nhẹ từ 0.4 lên 0.7 để văn phong trò chuyện linh hoạt, bớt rập khuôn
+      maxOutputTokens: 1500,
     },
   }
 

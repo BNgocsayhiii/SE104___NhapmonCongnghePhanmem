@@ -1,19 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'secret-key-change-in-production')
-
-async function getSession(req: NextRequest) {
-  const token = req.cookies.get('token')?.value
-  if (!token) return null
-
-  const { payload } = await jwtVerify(token, SECRET)
-  return {
-    id: payload.id as string,
-    role: payload.role as string,
-  }
-}
+import { apiError, apiMessage, apiSuccess, requireSession, writeAuditLog } from '@/lib/api'
+import { formatZodError, stockAdjustmentSchema } from '@/lib/validations'
 
 function getDaysLeft(expiredAt: Date) {
   return Math.ceil((expiredAt.getTime() - Date.now()) / 86400000)
@@ -25,13 +13,36 @@ function displayStatus(status: string, daysLeft: number) {
   return status
 }
 
+async function refreshBatchHealth() {
+  const now = new Date()
+  const batches = await prisma.batch.findMany({
+    where: { effectiveRemaining: { gt: 0 }, status: { not: 'DISPOSED' } },
+    include: { product: { select: { evaporationRate: true } } },
+  })
+
+  await Promise.all(batches.map(batch => {
+    const daysSincePackaged = Math.max(0, Math.floor((now.getTime() - batch.packagedAt.getTime()) / 86400000))
+    const evaporationLoss = batch.product.evaporationRate > 0
+      ? batch.quantity * (batch.product.evaporationRate / 100) * daysSincePackaged
+      : 0
+    const effectiveRemaining = Math.max(0, Math.min(batch.remaining, batch.remaining - evaporationLoss))
+    const daysLeft = getDaysLeft(batch.expiredAt)
+    const status = displayStatus(batch.status, daysLeft)
+
+    if (Math.abs(effectiveRemaining - batch.effectiveRemaining) < 0.001 && status === batch.status) return null
+    return prisma.batch.update({
+      where: { id: batch.id },
+      data: { effectiveRemaining, status: status as 'FRESH' | 'NEAR_EXPIRY' | 'EXPIRED' | 'DISPOSED' },
+    })
+  }))
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession(req)
-    if (!session) return NextResponse.json({ success: false, error: 'Chưa đăng nhập' }, { status: 401 })
-    if (session.role === 'STAFF_SALES') {
-      return NextResponse.json({ success: false, error: 'Bạn không có quyền xem kho' }, { status: 403 })
-    }
+    const { response } = await requireSession(req, ['MANAGER', 'STAFF_WAREHOUSE'])
+    if (response) return response
+
+    await refreshBatchHealth()
 
     const search = req.nextUrl.searchParams.get('search')?.trim().toLowerCase()
     const status = req.nextUrl.searchParams.get('status') || ''
@@ -111,9 +122,7 @@ export async function GET(req: NextRequest) {
       return acc
     }, {})).sort((a, b) => b.totalValue - a.totalValue)
 
-    return NextResponse.json({
-      success: true,
-      data: {
+    return apiSuccess({
         summary: {
           batchCount: mapped.length,
           totalInventoryValue,
@@ -125,10 +134,63 @@ export async function GET(req: NextRequest) {
         },
         batches: mapped,
         byProduct,
-      },
     })
   } catch (error) {
     console.error('[GET /api/kho-hang/quan-ly] Error:', error)
-    return NextResponse.json({ success: false, error: 'Không tải được dữ liệu kho' }, { status: 500 })
+    return apiError('Không tải được dữ liệu kho')
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { session, response } = await requireSession(req, ['MANAGER', 'STAFF_WAREHOUSE'])
+    if (response) return response
+
+    const parsed = stockAdjustmentSchema.safeParse(await req.json())
+    if (!parsed.success) return apiError(formatZodError(parsed.error), { status: 400 })
+    const { batchId, after, reason } = parsed.data
+
+    const result = await prisma.$transaction(async tx => {
+      const batch = await tx.batch.findUnique({ where: { id: batchId } })
+      if (!batch) throw new Error('Lô hàng không tồn tại')
+
+      const adjustment = await tx.stockAdjustment.create({
+        data: {
+          batchId,
+          before: batch.effectiveRemaining,
+          after,
+          delta: after - batch.effectiveRemaining,
+          reason,
+          createdById: session.id,
+        },
+      })
+
+      const updated = await tx.batch.update({
+        where: { id: batchId },
+        data: {
+          remaining: after,
+          effectiveRemaining: after,
+          status: after <= 0 ? 'DISPOSED' : batch.status,
+        },
+      })
+
+      await writeAuditLog(tx, {
+        userId: session.id,
+        action: 'STOCK_ADJUSTMENT',
+        target: 'Batch',
+        targetId: batchId,
+        oldValue: batch,
+        newValue: { adjustment, batch: updated },
+      })
+
+      return { adjustment, batch: updated }
+    })
+
+    return apiMessage('Đã điều chỉnh tồn kho', result)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Không điều chỉnh được tồn kho'
+    const status = message === 'Lô hàng không tồn tại' ? 404 : 500
+    console.error('[PATCH /api/kho-hang/quan-ly] Error:', error)
+    return apiError(message, { status })
   }
 }

@@ -21,7 +21,7 @@ export default function SuppliersPage() {
         .ft-input:focus { border-color: ${guavaColors.primary}; box-shadow: 0 0 0 3px rgba(96, 166, 31, 0.1); outline: none; }
       `}</style>
 
-      {/* LỚP NỀN TRÁI CÂY */}
+      {/* Lớp nền trái cây */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-[-1]">
         {floatingFruits.map((fruit, idx) => (
           <span key={idx} className={`floating-fruit ${fruit.pos}`} style={{ animationDelay: fruit.delay }}>{fruit.icon}</span>

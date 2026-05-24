@@ -21,7 +21,7 @@ export function useAuth() {
         const res = await fetch('/api/auth/me')
         const json = await res.json()
 
-        // SỬA TẠI ĐÂY: API của bạn trả về { user: payload }
+        // API trả về { user: payload }
         if (res.ok && json.user) {
           setUser(json.user)
         } else {
@@ -38,7 +38,7 @@ export function useAuth() {
     fetchSession()
   }, [])
 
-  // SỬA TẠI ĐÂY: Đảm bảo đăng xuất dứt điểm
+  // Đảm bảo đăng xuất dứt điểm
   const logout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })

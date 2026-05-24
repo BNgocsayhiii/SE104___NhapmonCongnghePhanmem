@@ -20,6 +20,34 @@ export interface DashboardStats {
   lowStock: { label: string; value: number; formatted: string }
   chartData: ChartData[]
   bestSellers: BestSeller[]
+  urgentBatches: {
+    id: string
+    batchCode: string
+    productName: string
+    sku: string
+    unit: string
+    effectiveRemaining: number
+    expiredAt: string
+    daysLeft: number
+    status: string
+    supplierName: string
+  }[]
+  lowStockProducts: {
+    productId: string
+    name: string
+    sku: string
+    unit: string
+    totalRemaining: number
+    batchCount: number
+  }[]
+  pendingOnlineOrders: {
+    id: string
+    invoiceCode: string
+    finalAmount: number
+    status: string
+    createdAt: string
+    customerName: string
+  }[]
 }
 
 export function useDashboardStats() {

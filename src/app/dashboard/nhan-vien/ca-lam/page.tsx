@@ -24,7 +24,7 @@ const SHIFT_HEADERS: { type: ShiftType; label: string; time: string }[] = [
 const DAY_NAMES = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
 
 export default function WorkShiftPage() {
-  // GỌI HOOK Ở ĐÂY (BÊN TRONG COMPONENT)
+  // Gọi hook ở đây (bên trong component)
   const { user } = useAuth();
   const { shifts, isLoading, currentWeekStart, nextWeek, prevWeek, toggleShift, formatDateAPI } = useWorkShifts();
 

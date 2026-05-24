@@ -55,12 +55,21 @@ export function useWarehouseWaste() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [historyFilter, setHistoryFilter] = useState({
+    filterType: 'month',
+    filterValue: new Date().toISOString().slice(0, 7),
+  })
 
   const refreshData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/kho-hang/huy-hang')
+      const params = new URLSearchParams()
+      if (historyFilter.filterValue) {
+        params.set('filterType', historyFilter.filterType)
+        params.set('filterValue', historyFilter.filterValue)
+      }
+      const res = await fetch(`/api/kho-hang/huy-hang?${params.toString()}`)
       const json = await res.json()
       if (!res.ok || !json.success) throw new Error(json.error || 'Không tải được dữ liệu hủy hàng')
       setData(json.data)
@@ -69,7 +78,7 @@ export function useWarehouseWaste() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [historyFilter])
 
   useEffect(() => {
     refreshData()
@@ -105,15 +114,52 @@ export function useWarehouseWaste() {
     }
   }, [draft, refreshData])
 
+  const quickDisposeExpired = useCallback(async () => {
+    const expiredBatches = (data?.batches || []).filter(batch => batch.status === 'EXPIRED' || new Date(batch.expiredAt).getTime() < Date.now())
+    if (expiredBatches.length === 0) {
+      setError('Không có lô hết hạn để hủy nhanh')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+    setSuccessMessage('')
+    try {
+      for (const batch of expiredBatches) {
+        const res = await fetch('/api/kho-hang/huy-hang', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            batchId: batch.id,
+            quantity: batch.effectiveRemaining,
+            reason: 'EXPIRED',
+            note: 'Hủy nhanh lô hết hạn',
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok || !json.success) throw new Error(json.error || 'Không hủy nhanh được lô hết hạn')
+      }
+      setSuccessMessage(`Đã hủy nhanh ${expiredBatches.length} lô hết hạn`)
+      await refreshData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không hủy nhanh được lô hết hạn')
+    } finally {
+      setSubmitting(false)
+    }
+  }, [data?.batches, refreshData])
+
   return {
     data,
     draft,
+    historyFilter,
     loading,
     submitting,
     error,
     successMessage,
     setDraft,
+    setHistoryFilter,
     createWasteLog,
+    quickDisposeExpired,
     refreshData,
   }
 }

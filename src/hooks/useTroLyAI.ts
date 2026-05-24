@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import type { ChatMessage, StoreContext } from '../lib/gemini'
+import type { ChatMessage, ReorderSuggestion, StoreContext } from '../lib/gemini'
 
 export interface DisplayMessage {
   id: string
@@ -16,6 +16,7 @@ interface UseTroLyAIReturn {
   isLoading: boolean
   isContextLoading: boolean
   storeContext: StoreContext | null
+  reorderSuggestions: ReorderSuggestion[]
   input: string
   setInput: (val: string) => void
   sendMessage: () => Promise<void>
@@ -40,6 +41,7 @@ export function useTroLyAI(): UseTroLyAIReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [isContextLoading, setIsContextLoading] = useState(true)
   const [storeContext, setStoreContext] = useState<StoreContext | null>(null)
+  const [reorderSuggestions, setReorderSuggestions] = useState<ReorderSuggestion[]>([])
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -51,6 +53,7 @@ export function useTroLyAI(): UseTroLyAIReturn {
         if (!res.ok) throw new Error('Không tải được dữ liệu kho')
         const data = await res.json()
         setStoreContext(data.storeContext)
+        setReorderSuggestions(data.reorderSuggestions || data.storeContext?.reorderSuggestions || [])
       } catch (err) {
         console.error('[useTroLyAI] loadContext:', err)
       } finally {
@@ -98,6 +101,7 @@ export function useTroLyAI(): UseTroLyAIReturn {
 
       const reply: string = data.reply
       if (data.storeContext) setStoreContext(data.storeContext)
+      setReorderSuggestions(data.reorderSuggestions || data.storeContext?.reorderSuggestions || [])
 
       // Cập nhật history cho lần sau
       historyRef.current = [
@@ -145,6 +149,7 @@ export function useTroLyAI(): UseTroLyAIReturn {
     isLoading,
     isContextLoading,
     storeContext,
+    reorderSuggestions,
     input,
     setInput,
     sendMessage,

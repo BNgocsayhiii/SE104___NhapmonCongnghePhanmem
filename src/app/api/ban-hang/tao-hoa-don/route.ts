@@ -1,49 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiError, apiSuccess, requireSession, writeAuditLog } from '@/lib/api'
+import { formatZodError, invoiceCreateSchema } from '@/lib/validations'
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'secret-key-change-in-production')
 const POINT_VALUE = 1000
 const EARN_POINT_RATE = 10000
-
-type CreateInvoiceItemInput = {
-  productId: string
-  batchId?: string
-  quantity: number
-}
-
-type CreateInvoiceInput = {
-  customerId?: string
-  customer?: {
-    name?: string
-    phone?: string
-    email?: string
-    address?: string
-  }
-  items?: CreateInvoiceItemInput[]
-  discountPercent?: number
-  pointsUsed?: number
-  shippingFee?: number
-  paymentMethod?: 'CASH' | 'QR'
-  channel?: 'POS' | 'ONLINE'
-  shippingAddress?: string
-}
-
-async function getSession(req: NextRequest) {
-  const token = req.cookies.get('token')?.value
-  if (!token) return null
-
-  const { payload } = await jwtVerify(token, SECRET)
-  return {
-    id: payload.id as string,
-    role: payload.role as string,
-  }
-}
-
-function asPositiveNumber(value: unknown) {
-  const num = Number(value)
-  return Number.isFinite(num) && num > 0 ? num : null
-}
 
 async function buildInvoiceCode(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) {
   const now = new Date()
@@ -59,11 +20,8 @@ async function buildInvoiceCode(tx: Parameters<Parameters<typeof prisma.$transac
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession(req)
-    if (!session) return NextResponse.json({ success: false, error: 'Chưa đăng nhập' }, { status: 401 })
-    if (session.role === 'STAFF_WAREHOUSE') {
-      return NextResponse.json({ success: false, error: 'Bạn không có quyền tạo hóa đơn' }, { status: 403 })
-    }
+    const { response } = await requireSession(req, ['MANAGER', 'STAFF_SALES'])
+    if (response) return response
 
     const search = req.nextUrl.searchParams.get('search')?.trim()
 
@@ -71,9 +29,7 @@ export async function GET(req: NextRequest) {
       prisma.product.findMany({
         where: {
           status: 'ACTIVE',
-          ...(search
-            ? { name: { contains: search, mode: 'insensitive' as const } }
-            : {}),
+          ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}),
           batches: {
             some: {
               status: { in: ['FRESH', 'NEAR_EXPIRY'] },
@@ -115,43 +71,22 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
-    return NextResponse.json({ success: true, data: { products, customers } })
+    return apiSuccess({ products, customers })
   } catch (error) {
     console.error('[GET /api/ban-hang/tao-hoa-don] Error:', error)
-    return NextResponse.json({ success: false, error: 'Không tải được dữ liệu bán hàng' }, { status: 500 })
+    return apiError('Không tải được dữ liệu bán hàng')
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession(req)
-    if (!session) return NextResponse.json({ success: false, error: 'Chưa đăng nhập' }, { status: 401 })
-    if (session.role === 'STAFF_WAREHOUSE') {
-      return NextResponse.json({ success: false, error: 'Bạn không có quyền tạo hóa đơn' }, { status: 403 })
-    }
+    const { session, response } = await requireSession(req, ['MANAGER', 'STAFF_SALES'])
+    if (response) return response
 
-    const body = (await req.json()) as CreateInvoiceInput
-    const items = Array.isArray(body.items) ? body.items : []
-    if (items.length === 0) {
-      return NextResponse.json({ success: false, error: 'Hóa đơn cần có ít nhất 1 sản phẩm' }, { status: 400 })
-    }
+    const parsed = invoiceCreateSchema.safeParse(await req.json())
+    if (!parsed.success) return apiError(formatZodError(parsed.error), { status: 400 })
 
-    const normalizedItems = items.map((item) => ({
-      productId: String(item.productId || ''),
-      batchId: item.batchId ? String(item.batchId) : undefined,
-      quantity: asPositiveNumber(item.quantity),
-    }))
-
-    if (normalizedItems.some((item) => !item.productId || !item.quantity)) {
-      return NextResponse.json({ success: false, error: 'Dữ liệu sản phẩm không hợp lệ' }, { status: 400 })
-    }
-
-    const discountPercent = Math.min(Math.max(Number(body.discountPercent || 0), 0), 100)
-    const pointsUsed = Math.max(Math.floor(Number(body.pointsUsed || 0)), 0)
-    const shippingFee = Math.max(Number(body.shippingFee || 0), 0)
-    const paymentMethod = body.paymentMethod === 'QR' ? 'QR' : 'CASH'
-    const channel = body.channel || 'POS'
-
+    const body = parsed.data
     const invoice = await prisma.$transaction(async (tx) => {
       let customerId = body.customerId || undefined
 
@@ -160,14 +95,14 @@ export async function POST(req: NextRequest) {
           where: { phone: body.customer.phone },
           update: {
             name: body.customer.name,
-            email: body.customer.email || undefined,
-            address: body.customer.address || undefined,
+            email: body.customer.email,
+            address: body.customer.address,
           },
           create: {
             name: body.customer.name,
             phone: body.customer.phone,
-            email: body.customer.email || undefined,
-            address: body.customer.address || undefined,
+            email: body.customer.email,
+            address: body.customer.address,
           },
         })
         customerId = customer.id
@@ -183,8 +118,8 @@ export async function POST(req: NextRequest) {
         customerPoints = customer.points
       }
 
-      if (pointsUsed > 0 && !customerId) throw new Error('Cần chọn khách hàng để dùng điểm')
-      if (pointsUsed > customerPoints) throw new Error('Số điểm không đủ')
+      if (body.pointsUsed > 0 && !customerId) throw new Error('Cần chọn khách hàng để dùng điểm')
+      if (body.pointsUsed > customerPoints) throw new Error('Số điểm không đủ')
 
       const invoiceCode = await buildInvoiceCode(tx)
       const invoiceItems: Array<{
@@ -195,15 +130,14 @@ export async function POST(req: NextRequest) {
         subtotal: number
       }> = []
 
-      for (const item of normalizedItems) {
-        const quantity = item.quantity as number
+      for (const item of body.items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
           select: { id: true, currentPrice: true, status: true },
         })
         if (!product || product.status !== 'ACTIVE') throw new Error('Sản phẩm không khả dụng')
 
-        let remainingToSell = quantity
+        let remainingToSell = item.quantity
         const batches = await tx.batch.findMany({
           where: {
             productId: item.productId,
@@ -239,9 +173,9 @@ export async function POST(req: NextRequest) {
       }
 
       const totalAmount = invoiceItems.reduce((sum, item) => sum + item.subtotal, 0)
-      const discount = Math.round(totalAmount * (discountPercent / 100))
-      const pointDiscount = pointsUsed * POINT_VALUE
-      const finalAmount = Math.max(totalAmount - discount - pointDiscount + shippingFee, 0)
+      const discount = Math.round(totalAmount * (body.discountPercent / 100))
+      const pointDiscount = body.pointsUsed * POINT_VALUE
+      const finalAmount = Math.max(totalAmount - discount - pointDiscount + body.shippingFee, 0)
       const pointsEarned = Math.floor(finalAmount / EARN_POINT_RATE)
 
       const createdInvoice = await tx.invoice.create({
@@ -249,32 +183,35 @@ export async function POST(req: NextRequest) {
           invoiceCode,
           customerId,
           totalAmount,
-          discountPercent,
+          discountPercent: body.discountPercent,
           discount: discount + pointDiscount,
-          pointsUsed,
-          shippingFee,
+          pointsUsed: body.pointsUsed,
+          shippingFee: body.shippingFee,
           finalAmount,
-          paymentMethod,
-          channel,
+          paymentMethod: body.paymentMethod,
+          channel: body.channel,
           status: 'PAID',
-          shippingAddress: body.shippingAddress || body.customer?.address || undefined,
+          shippingAddress: body.shippingAddress || body.customer?.address,
           createdById: session.id,
-          items: {
-            create: invoiceItems,
-          },
+          items: { create: invoiceItems },
         },
         include: {
           customer: { select: { name: true, phone: true, points: true } },
-          items: { include: { product: { select: { name: true, unit: true } }, batch: { select: { batchCode: true } } } },
+          items: {
+            include: {
+              product: { select: { name: true, unit: true } },
+              batch: { select: { batchCode: true } },
+            },
+          },
         },
       })
 
-      if (customerId && pointsUsed > 0) {
+      if (customerId && body.pointsUsed > 0) {
         await tx.pointTransaction.create({
           data: {
             customerId,
             invoiceId: createdInvoice.id,
-            delta: -pointsUsed,
+            delta: -body.pointsUsed,
             reason: `Dùng điểm ${invoiceCode}`,
           },
         })
@@ -291,17 +228,31 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      if (customerId && (pointsUsed > 0 || pointsEarned > 0)) {
+      if (customerId && (body.pointsUsed > 0 || pointsEarned > 0)) {
         await tx.customer.update({
           where: { id: customerId },
-          data: { points: { increment: pointsEarned - pointsUsed } },
+          data: { points: { increment: pointsEarned - body.pointsUsed } },
         })
       }
+
+      await writeAuditLog(tx, {
+        userId: session.id,
+        action: 'CREATE_INVOICE',
+        target: 'Invoice',
+        targetId: createdInvoice.id,
+        newValue: {
+          invoiceCode,
+          customerId,
+          totalAmount,
+          finalAmount,
+          itemCount: invoiceItems.length,
+        },
+      })
 
       return createdInvoice
     })
 
-    return NextResponse.json({ success: true, data: invoice }, { status: 201 })
+    return apiSuccess(invoice, { status: 201 })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Không tạo được hóa đơn'
     const knownErrors = [
@@ -313,6 +264,6 @@ export async function POST(req: NextRequest) {
     ]
     const status = knownErrors.includes(message) ? 400 : 500
     console.error('[POST /api/ban-hang/tao-hoa-don] Error:', error)
-    return NextResponse.json({ success: false, error: message }, { status })
+    return apiError(message, { status })
   }
 }

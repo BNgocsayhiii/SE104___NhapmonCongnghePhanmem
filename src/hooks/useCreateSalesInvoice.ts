@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-export type PaymentMethod = 'CASH' | 'QR'
+export type PaymentMethod = 'CASH' | 'QR' | 'CARD' | 'COD' | 'BANK_TRANSFER'
 export type SaleChannel = 'POS' | 'ONLINE'
 
 export interface SaleBatch {
@@ -163,8 +163,19 @@ export function useCreateSalesInvoice() {
       return null
     }
 
+    const invalidStock = cartDetails.find(item => item.quantity > item.available)
+    if (invalidStock) {
+      setError(`Tồn kho không đủ cho ${invalidStock.product?.name || 'sản phẩm đã chọn'}`)
+      return null
+    }
+
     if (!selectedCustomerId && newCustomer.name.trim() && !newCustomer.phone.trim()) {
       setError('Vui lòng nhập số điện thoại để thêm khách hàng mới')
+      return null
+    }
+
+    if (channel === 'ONLINE' && !(shippingAddress || selectedCustomer?.address || newCustomer.address).trim()) {
+      setError('Đơn online cần có địa chỉ giao hàng')
       return null
     }
 
@@ -202,6 +213,7 @@ export function useCreateSalesInvoice() {
     }
   }, [
     cartItems,
+    cartDetails,
     channel,
     discountPercent,
     newCustomer,
@@ -210,6 +222,7 @@ export function useCreateSalesInvoice() {
     refreshData,
     resetForm,
     selectedCustomerId,
+    selectedCustomer?.address,
     shippingAddress,
     shippingFee,
   ])

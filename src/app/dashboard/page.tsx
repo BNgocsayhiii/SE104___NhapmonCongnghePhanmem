@@ -1,231 +1,164 @@
 'use client'
-import React, { useMemo } from 'react'
+
+import React from 'react'
+import Link from 'next/link'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 
+const money = new Intl.NumberFormat('vi-VN')
+const number = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 })
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString('vi-VN')
+}
+
+function urgencyLabel(daysLeft: number) {
+  if (daysLeft < 0) return `Quá hạn ${Math.abs(daysLeft)} ngày`
+  if (daysLeft === 0) return 'Hết hạn hôm nay'
+  return `Còn ${daysLeft} ngày`
+}
+
 export default function DashboardOverview() {
-  const { stats, loading } = useDashboardStats()
+  const { stats, loading, error } = useDashboardStats()
 
-  const guavaColors = {
-    primary: '#60A61F',
-    textDark: '#1a4d2e',
-    mainBg: '#f8faf7',
-    cardBg1: '#CBEFAA',
-    cardBgProfit: '#C8D77C',
-    cardBg2: '#FBA685',
-    cardBg3: '#F5EE9A',
-    gridLine: '#ECEDDF',
-  };
-
-  const floatingFruits = [
-    { icon: '🍎', pos: 'top-[8%] left-[5%]', delay: '0s' },
-    { icon: '🍐', pos: 'top-[15%] right-[12%]', delay: '1s' },
-    { icon: '🍒', pos: 'top-[28%] left-[40%]', delay: '1.9s' },
-    { icon: '🍇', pos: 'top-[40%] right-[10%]', delay: '0.5s' },
-    { icon: '🥭', pos: 'top-[50%] left-[8%]', delay: '2s' },
-    { icon: '🍊', pos: 'top-[62%] left-[62%]', delay: '3.5s' },
-    { icon: '🍌', pos: 'top-[70%] left-[30%]', delay: '2.7s' },
-    { icon: '🍓', pos: 'top-[82%] right-[8%]', delay: '2.5s' },
-    { icon: '🍈', pos: 'top-[88%] left-[15%]', delay: '1.5s' },
-  ];
-
-  const statCards = stats
-  ? [
-      { label: stats.revenue.label, value: stats.revenue.formatted, icon: '📈', bgColor: guavaColors.cardBg1 },
-      { label: stats.profit.label, value: stats.profit.formatted, icon: '💵', bgColor: guavaColors.cardBgProfit },
-      { label: stats.expiringSoon.label, value: stats.expiringSoon.formatted, icon: '⏳', bgColor: guavaColors.cardBg2 },
-      { label: stats.lowStock.label, value: stats.lowStock.formatted, icon: '⚠️', bgColor: guavaColors.cardBg3 },
-    ]
-  : [
-      { label: 'Doanh thu hôm nay', value: '—', icon: '📈', bgColor: guavaColors.cardBg1 },
-      { label: 'Lợi nhuận hôm nay', value: '—', icon: '💵', bgColor: guavaColors.cardBgProfit },
-      { label: 'Sắp hết hạn', value: '—', icon: '⏳', bgColor: guavaColors.cardBg2 },
-      { label: 'Sắp hết hàng', value: '—', icon: '⚠️', bgColor: guavaColors.cardBg3 },
-    ]
-
-  // --- LOGIC TÍNH TOÁN BIỂU ĐỒ ĐỘNG ---
-  const { chartPoints, chartMax, pathD, yAxisLabels } = useMemo(() => {
-    if (!stats?.chartData || stats.chartData.length === 0) {
-      return { chartPoints: [], chartMax: 4000000, pathD: '', yAxisLabels: [] };
-    }
-    
-    // Tìm mức lợi nhuận cao nhất trong tháng để làm trần biểu đồ
-    const maxVal = Math.max(...stats.chartData.map(d => d.value));
-    // Tự động làm tròn số trần (Ví dụ: 3.2M -> Làm tròn lên 4M để biểu đồ đẹp)
-    let topAxis = Math.ceil((maxVal || 1) / 1000000) * 1000000; 
-    if (topAxis === 0) topAxis = 4000000; // Mặc định nếu không có data
-
-    // Tạo nhãn trục Y (Chia làm 4 vạch)
-    const yAxisLabels = [topAxis, topAxis * 0.75, topAxis * 0.5, topAxis * 0.25, 0].map(val => 
-      val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : `${val.toLocaleString()} ₫`
-    );
-
-    // Tính toạ độ các điểm SVG
-    const chartPoints = stats.chartData.map((d, i) => {
-      const x = i * 33.33; // 4 điểm: 0, 33.33, 66.66, 100
-      // Tính % chiều cao (100 là đáy, 0 là đỉnh). Trừ hao 5% để không đụng nóc.
-      let y = 100 - (d.value / topAxis * 95); 
-      if (y > 100) y = 100;
-
-      // Format số liệu hiển thị trên điểm
-      const valStr = d.value >= 1000000 ? `${(d.value / 1000000).toFixed(1)}M` : `${(d.value / 1000).toFixed(0)}K`;
-      
-      return { x, y, valStr, raw: d.value };
-    });
-
-    const pathD = `M 0,${chartPoints[0].y} L 33.33,${chartPoints[1].y} L 66.66,${chartPoints[2].y} L 100,${chartPoints[3].y}`;
-
-    return { chartPoints, chartMax: topAxis, pathD, yAxisLabels };
-  }, [stats]);
-
+  const cards = [
+    { label: 'Lô cần xử lý', value: stats?.expiringSoon.formatted || '0 lô', tone: 'bg-red-100 text-red-900', href: '/dashboard/kho-hang/huy-hang' },
+    { label: 'Sắp hết hàng', value: stats?.lowStock.formatted || '0 mặt hàng', tone: 'bg-amber-100 text-amber-900', href: '/dashboard/kho-hang/nhap-hang' },
+    { label: 'Đơn online chờ', value: `${stats?.pendingOnlineOrders.length || 0} đơn`, tone: 'bg-blue-100 text-blue-900', href: '/dashboard/ban-hang/lich-su-ban-hang' },
+    { label: 'Doanh thu hôm nay', value: stats?.revenue.formatted || '0 đ', tone: 'bg-green-100 text-green-900', href: '/dashboard/bao-cao' },
+  ]
 
   return (
-    <div className="fade-up p-6 relative min-h-full z-0 bg-transparent">
-      
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap');
-        .stat-card { border-radius: 14px; padding: 16px; transition: all 0.3s; }
-        .stat-card:hover { box-shadow: 0 6px 20px rgba(96, 166, 31, 0.15); transform: translateY(-2px); }
-        @keyframes float {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-12px) rotate(5deg); }
-        }
-        .floating-fruit { position: absolute; animation: float 6s ease-in-out infinite; opacity: 0.45; font-size: 1.7rem; }
-      `}</style>
-
-      {/* LỚP TRÁI CÂY NỀN */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-[-1]">
-        {floatingFruits.map((fruit, index) => (
-          <span key={index} className={`floating-fruit ${fruit.pos}`} style={{ animationDelay: fruit.delay }}>
-            {fruit.icon}
-          </span>
-        ))}
-      </div>
-
-      <div className="relative z-10">
-        
-        {/* Header */}
-        <div className="mb-8 text-center md:text-left">
-          <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-4xl uppercase mb-1">
-            TỔNG QUAN
-          </h1>
-          <p className="text-slate-500 text-sm font-medium">Phân tích dữ liệu kinh doanh định kỳ</p>
+    <div className="min-h-full bg-transparent p-6 text-slate-800">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-3xl font-black uppercase text-[#1a4d2e]">Bảng điều phối khẩn cấp</h1>
+            <p className="mt-1 text-sm font-semibold text-slate-600">Ưu tiên xử lý hàng cận hạn, thiếu tồn và đơn online đang chờ.</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm">
+            Lợi nhuận hôm nay: <span className="text-[#1a4d2e]">{stats?.profit.formatted || '0 đ'}</span>
+          </div>
         </div>
 
-        {/* 4 Ô Thống kê hàng ngang */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {statCards.map((item, idx) => (
-            <div key={idx} className="stat-card flex items-center justify-between shadow-sm" style={{ backgroundColor: item.bgColor }}>
-              <div>
-                <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">{item.label}</p>
-                <p style={{ color: guavaColors.textDark }} className="text-xl font-black whitespace-nowrap">
-                  {loading ? '...' : item.value}
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg bg-white/50 shadow-sm flex-shrink-0 ml-2">
-                {item.icon}
-              </div>
-            </div>
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>}
+
+        <div className="grid gap-4 md:grid-cols-4">
+          {cards.map(card => (
+            <Link key={card.label} href={card.href} className={`rounded-xl p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.tone}`}>
+              <p className="text-xs font-black uppercase tracking-wide opacity-80">{card.label}</p>
+              <p className="mt-2 text-2xl font-black">{loading ? '...' : card.value}</p>
+            </Link>
           ))}
         </div>
 
-        {/* Hàng 2: Biểu đồ & Best Seller */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* CỘT BIỂU ĐỒ (Chiếm 2/3) */}
-          <div className="lg:col-span-2 flex flex-col">
-            <div className="bg-transparent rounded-2xl p-6 border border-slate-200/60 shadow-sm h-full relative">
-              
-              {loading && <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20 flex items-center justify-center font-bold text-[#60A61F]">Đang tải dữ liệu...</div>}
-
-              <div className="flex justify-between items-center mb-8">
-                <h3 style={{ color: guavaColors.textDark }} className="font-bold text-xl tracking-tight">LỢI NHUẬN 4 TUẦN QUA</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-                  Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
-                </p>
+        <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <section className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <h2 className="text-lg font-black text-red-800">Lô cần xử lý ngay</h2>
+                <p className="text-xs font-semibold text-slate-600">Bao gồm lô đã quá hạn và lô còn tối đa 3 ngày.</p>
               </div>
-              
-              <div className="h-[280px] w-full relative flex items-end">
-                {/* TRỤC Y */}
-                <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] font-bold text-slate-400 pb-10 w-[90px] pr-4 text-right">
-                  {yAxisLabels.map((lbl, idx) => <span key={idx}>{lbl}</span>)}
-                </div>
-                
-                {/* VÙNG BIỂU ĐỒ */}
-                <div className="ml-[90px] w-full h-full relative pr-8">
-                  <div className="w-full h-[calc(100%-40px)] border-b-2 border-l-2 border-slate-200 relative flex items-end">
-                      <div style={{ borderColor: guavaColors.gridLine }} className="absolute w-full h-full border-t border-dashed top-0"></div>
-                      <div style={{ borderColor: guavaColors.gridLine }} className="absolute w-full h-1/2 border-t border-dashed top-1/2"></div>
-                      <div style={{ borderColor: guavaColors.gridLine }} className="absolute h-full border-l border-dashed left-[33.33%]"></div>
-                      <div style={{ borderColor: guavaColors.gridLine }} className="absolute h-full border-l border-dashed left-[66.66%]"></div>
-
-                      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none">
-                          {pathD && <path d={pathD} fill="none" stroke={guavaColors.primary} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />}
-                      </svg>
-
-                      {/* Các điểm mốc */}
-                      {chartPoints.map((pt, i) => (
-                        <div key={i} className="absolute flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-1/2" style={{ left: `${pt.x}%`, top: `${pt.y}%` }}>
-                          <span style={{ color: guavaColors.textDark }} className="text-[11px] font-black mb-1 whitespace-nowrap">
-                            {pt.valStr}
-                          </span>
-                          <div style={{ borderColor: guavaColors.primary }} className="w-2.5 h-2.5 bg-white border-2 rounded-full shadow-sm"></div>
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* TRỤC X */}
-                  <div className="w-full pt-4 text-[11px] font-bold text-slate-500 relative h-8">
-                    {stats?.chartData?.map((d, idx) => (
-                      <span key={idx} className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${idx * 33.33}%` }}>
-                        {d.label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <Link href="/dashboard/kho-hang/huy-hang" className="rounded-lg bg-red-700 px-3 py-2 text-xs font-black text-white hover:bg-red-800">
+                Hủy hàng
+              </Link>
             </div>
-          </div>
+            <div className="max-h-[420px] overflow-y-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-white text-xs uppercase text-slate-600">
+                  <tr>
+                    <th className="px-5 py-3">Lô / sản phẩm</th>
+                    <th className="px-5 py-3">Nhà cung cấp</th>
+                    <th className="px-5 py-3 text-right">Tồn</th>
+                    <th className="px-5 py-3">HSD</th>
+                    <th className="px-5 py-3">Mức độ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={5} className="px-5 py-10 text-center font-semibold text-slate-600">Đang tải dữ liệu...</td></tr>
+                  ) : stats?.urgentBatches.length === 0 ? (
+                    <tr><td colSpan={5} className="px-5 py-10 text-center font-semibold text-slate-600">Không có lô khẩn cấp.</td></tr>
+                  ) : stats?.urgentBatches.map(batch => (
+                    <tr key={batch.id} className="border-b border-slate-50 hover:bg-red-50/40">
+                      <td className="px-5 py-4">
+                        <p className="font-black text-slate-900">{batch.productName}</p>
+                        <p className="text-xs font-semibold text-slate-600">{batch.batchCode} - {batch.sku}</p>
+                      </td>
+                      <td className="px-5 py-4 font-semibold text-slate-700">{batch.supplierName}</td>
+                      <td className="px-5 py-4 text-right font-black text-[#1a4d2e]">{number.format(batch.effectiveRemaining)} {batch.unit}</td>
+                      <td className="px-5 py-4 font-semibold text-slate-700">{formatDate(batch.expiredAt)}</td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-lg px-3 py-1 text-xs font-black ${batch.daysLeft < 0 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {urgencyLabel(batch.daysLeft)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
 
-          {/* CỘT BEST SELLER (Chiếm 1/3) */}
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 shadow-sm flex flex-col h-full relative">
-            {loading && <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-20"></div>}
-
-            <h3 style={{ color: guavaColors.textDark }} className="font-bold text-xl mb-6 italic">🏆 Best Seller</h3>
-            
-            <div className="space-y-4 flex-1">
-              {stats?.bestSellers?.length === 0 && !loading && (
-                <p className="text-center text-slate-400 text-sm mt-10">Chưa có dữ liệu bán hàng</p>
-              )}
-
-              {stats?.bestSellers?.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between group cursor-pointer pb-2 border-b border-dashed border-slate-100 last:border-0 last:pb-0 hover:bg-slate-50 rounded-lg p-1.5 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-slate-50 w-12 h-12 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                      {item.img}
-                    </div>
-                    <div>
-                      <p style={{ color: guavaColors.textDark }} className="text-[13px] font-bold leading-tight mb-0.5 line-clamp-1 max-w-[120px]" title={item.name}>
-                        {item.name}
-                      </p>
-                      <p className="text-[10px] font-medium text-slate-400">{item.cat}</p>
+          <div className="space-y-5">
+            <section className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-black text-amber-800">Mặt hàng sắp hết</h2>
+                <Link href="/dashboard/kho-hang/nhap-hang" className="text-xs font-black text-[#1a4d2e] hover:underline">Nhập thêm</Link>
+              </div>
+              <div className="max-h-64 space-y-3 overflow-y-auto pr-1">
+                {loading ? <p className="font-semibold text-slate-600">Đang tải...</p> : stats?.lowStockProducts.length === 0 ? (
+                  <p className="py-6 text-center text-sm font-semibold text-slate-600">Không có mặt hàng sắp hết.</p>
+                ) : stats?.lowStockProducts.map(product => (
+                  <div key={product.productId} className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-slate-900">{product.name}</p>
+                        <p className="text-xs font-semibold text-slate-600">{product.sku} - {product.batchCount} lô</p>
+                      </div>
+                      <p className="font-black text-amber-900">{number.format(product.totalRemaining)} {product.unit}</p>
                     </div>
                   </div>
-                  <div className="text-right pr-2">
-                    <p style={{ color: guavaColors.primary }} className="text-base font-black">{item.sold}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">đã bán</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-black text-blue-800">Đơn online đang chờ</h2>
+              <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
+                {loading ? <p className="font-semibold text-slate-600">Đang tải...</p> : stats?.pendingOnlineOrders.length === 0 ? (
+                  <p className="py-6 text-center text-sm font-semibold text-slate-600">Không có đơn online cần xử lý.</p>
+                ) : stats?.pendingOnlineOrders.map(order => (
+                  <Link key={order.id} href="/dashboard/ban-hang/lich-su-ban-hang" className="block rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 hover:bg-blue-100">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-black text-slate-900">{order.invoiceCode}</p>
+                        <p className="text-xs font-semibold text-slate-600">{order.customerName} - {formatDate(order.createdAt)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-blue-900">{money.format(order.finalAmount)} đ</p>
+                        <p className="text-xs font-bold text-blue-700">{order.status}</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
 
-        <div className="mt-10 text-center opacity-90 relative z-20">
-           <p className="text-[#60A61F] font-bold italic text-[15px] tracking-wide">
-              "FruiTrack — Tươi ngon mỗi ngày, quản lý dễ dàng trong tầm tay"
-           </p>
-        </div>
-
+        <section className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+          <h2 className="mb-4 text-lg font-black text-[#1a4d2e]">Sản phẩm bán chạy</h2>
+          <div className="grid gap-3 md:grid-cols-5">
+            {stats?.bestSellers.map(item => (
+              <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                <p className="text-2xl">{item.img}</p>
+                <p className="mt-2 truncate font-black text-slate-900" title={item.name}>{item.name}</p>
+                <p className="text-xs font-semibold text-slate-600">{item.cat}</p>
+                <p className="mt-2 text-sm font-black text-[#60A61F]">{number.format(item.sold)} đã bán</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )

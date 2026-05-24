@@ -105,6 +105,15 @@ function UserModal({
               </div>
             )}
 
+            {!isEdit && (
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu *</label>
+                <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 font-medium placeholder-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#60A61F] transition-all"
+                  placeholder="Tối thiểu 8 ký tự, có chữ và số" />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
               <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
@@ -119,7 +128,7 @@ function UserModal({
                 placeholder="a@email.com" />
             </div>
 
-            {/* ĐÃ SỬA LỖI TẠI ĐÂY: Chỉ hiện đổi mật khẩu nếu (isEdit VÀ Đang tự sửa Profile của mình) */}
+            {/* Chỉ hiện đổi mật khẩu nếu đang tự sửa profile của mình */}
             {isEdit && user?.id === currentUserId && (
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -147,7 +156,7 @@ function UserModal({
 
           {!isEdit && (
             <p className="text-xs text-[#1a4d2e] bg-[#CBEFAA]/30 border border-[#CBEFAA] rounded-lg px-3 py-2">
-              🔑 Mật khẩu mặc định: <strong className="text-[#60A61F]">123456</strong> — nhân viên tự đổi sau khi đăng nhập.
+              Mật khẩu phải có tối thiểu 8 ký tự, bao gồm chữ và số.
             </p>
           )}
         </div>
