@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://www.uit.edu.vn/">
-    <img src="https://github.com/BNgocsayhiii/SE104___NhapmonCongnghePhanmem/blob/main/pic/uit_link.png" alt="VNUHCM-UIT Logo" width="500">
+    <img src="https://github.com/BNgocsayhiii/SE104___NhapmonCongnghePhanmem/logo.png" alt="VNUHCM-UIT Logo" width="500">
   </a>
 </div><h1 align="center"> SE104 - Nhập môn Công nghệ Phần mềm
 
