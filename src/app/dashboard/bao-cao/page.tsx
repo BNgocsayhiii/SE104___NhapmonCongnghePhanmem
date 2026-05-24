@@ -3,7 +3,8 @@ import React from 'react'
 import { useReports, TimeRange } from '@/hooks/useReports'
 
 export default function ReportsPage() {
-  const { data, loading, timeRange, setTimeRange } = useReports()
+  const { data, loading, error, filter, setFilter } = useReports()
+  const timeRange = filter.range
 
   const guavaColors = {
     primary: '#60A61F',
@@ -23,10 +24,10 @@ export default function ReportsPage() {
   }
 
   const timeTabs: { id: TimeRange; label: string }[] = [
-    { id: 'day', label: 'Hôm nay' },
-    { id: 'month', label: 'Tháng này' },
-    { id: 'quarter', label: 'Quý này' },
-    { id: 'year', label: 'Năm nay' },
+    { id: 'day', label: 'Theo ngày' },
+    { id: 'month', label: 'Theo tháng' },
+    { id: 'quarter', label: 'Theo quý' },
+    { id: 'year', label: 'Theo năm' },
   ]
 
   const floatingFruits = [
@@ -38,7 +39,51 @@ export default function ReportsPage() {
   const maxChannel = Math.max(...(data?.channels.map(c => c.value) || [1]))
   const maxPayment = Math.max(...(data?.payments.map(p => p.value) || [1]))
   const totalWaste = data?.summary.totalWasteCost || 1
-  const activeLabel = timeTabs.find(t => t.id === timeRange)?.label
+  const activeLabel = (() => {
+    if (filter.range === 'day') return filter.date ? new Date(`${filter.date}T00:00:00`).toLocaleDateString('vi-VN') : 'Ngày được chọn'
+    if (filter.range === 'month') {
+      const [year, month] = filter.month.split('-')
+      return year && month ? `Tháng ${Number(month)}/${year}` : 'Tháng được chọn'
+    }
+    if (filter.range === 'quarter') return `Quý ${filter.quarter}/${filter.year}`
+    return `Năm ${filter.year}`
+  })()
+
+  const updateFilter = (next: Partial<typeof filter>) => {
+    setFilter(current => ({ ...current, ...next }))
+  }
+
+  const toDateInputValue = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const shiftPeriod = (direction: -1 | 1) => {
+    setFilter(current => {
+      if (current.range === 'day') {
+        const date = current.date ? new Date(`${current.date}T00:00:00`) : new Date()
+        date.setDate(date.getDate() + direction)
+        return { ...current, date: toDateInputValue(date) }
+      }
+
+      if (current.range === 'month') {
+        const [year, month] = current.month ? current.month.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth() + 1]
+        const date = new Date(year, month - 1 + direction, 1)
+        return { ...current, month: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` }
+      }
+
+      if (current.range === 'quarter') {
+        const nextQuarter = current.quarter + direction
+        if (nextQuarter < 1) return { ...current, quarter: 4, year: current.year - 1 }
+        if (nextQuarter > 4) return { ...current, quarter: 1, year: current.year + 1 }
+        return { ...current, quarter: nextQuarter }
+      }
+
+      return { ...current, year: current.year + direction }
+    })
+  }
 
   return (
     <div className="fade-up p-6 relative min-h-full z-0 bg-transparent">
@@ -59,7 +104,7 @@ export default function ReportsPage() {
 
       <div className="relative z-10 max-w-6xl mx-auto">
         
-        {/* HEADER & TIME TABS */}
+        {/* HEADER & TIME FILTERS */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>
             <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-4xl uppercase mb-1">
@@ -68,23 +113,108 @@ export default function ReportsPage() {
             <p className="text-slate-500 text-sm font-medium">Thống kê dữ liệu cửa hàng chuyên sâu</p>
           </div>
 
-          {/* Pill Menu Thời gian */}
-          <div className="flex bg-white/80 backdrop-blur-md p-1 rounded-xl shadow-sm border border-slate-200/60 self-start md:self-auto">
-            {timeTabs.map((tab) => (
+          <div className="flex flex-col gap-2 rounded-2xl border border-slate-200/60 bg-white/85 p-2 shadow-sm backdrop-blur-md">
+            <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+              {timeTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => updateFilter({ range: tab.id })}
+                  className={`px-3 py-2 text-sm font-bold rounded-xl transition-all ${
+                    timeRange === tab.id
+                      ? 'bg-[#60A61F] text-white shadow-md'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/70'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-[40px_minmax(190px,1fr)_40px] items-center gap-2">
               <button
-                key={tab.id}
-                onClick={() => setTimeRange(tab.id)}
-                className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${
-                  timeRange === tab.id 
-                    ? 'bg-[#60A61F] text-white shadow-md' 
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'
-                }`}
+                type="button"
+                onClick={() => shiftPeriod(-1)}
+                className="h-10 rounded-xl border border-slate-200 bg-white text-lg font-black text-slate-600 hover:bg-slate-50"
               >
-                {tab.label}
+                ‹
               </button>
-            ))}
+
+              {filter.range === 'day' && (
+                <input
+                  type="date"
+                  value={filter.date}
+                  onChange={(event) => {
+                    if (event.target.value) updateFilter({ date: event.target.value })
+                  }}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-[#60A61F]"
+                />
+              )}
+
+              {filter.range === 'month' && (
+                <input
+                  type="month"
+                  value={filter.month}
+                  onChange={(event) => {
+                    if (event.target.value) updateFilter({ month: event.target.value })
+                  }}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-[#60A61F]"
+                />
+              )}
+
+              {filter.range === 'quarter' && (
+                <div className="grid grid-cols-[1fr_96px] gap-2">
+                  <select
+                    value={filter.quarter}
+                    onChange={(event) => updateFilter({ quarter: Number(event.target.value) })}
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-[#60A61F]"
+                  >
+                    <option value={1}>Quý 1</option>
+                    <option value={2}>Quý 2</option>
+                    <option value={3}>Quý 3</option>
+                    <option value={4}>Quý 4</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="2000"
+                    max="2100"
+                    value={filter.year}
+                    onChange={(event) => {
+                      if (event.target.value) updateFilter({ year: Number(event.target.value) })
+                    }}
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-[#60A61F]"
+                  />
+                </div>
+              )}
+
+              {filter.range === 'year' && (
+                <input
+                  type="number"
+                  min="2000"
+                  max="2100"
+                  value={filter.year}
+                  onChange={(event) => {
+                    if (event.target.value) updateFilter({ year: Number(event.target.value) })
+                  }}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none focus:border-[#60A61F]"
+                />
+              )}
+
+              <button
+                type="button"
+                onClick={() => shiftPeriod(1)}
+                className="h-10 rounded-xl border border-slate-200 bg-white text-lg font-black text-slate-600 hover:bg-slate-50"
+              >
+                ›
+              </button>
+            </div>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+            {error}
+          </div>
+        )}
 
         {/* 4 Ô Chỉ số Tổng quan */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">

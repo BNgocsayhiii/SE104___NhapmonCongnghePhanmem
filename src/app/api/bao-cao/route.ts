@@ -1,57 +1,101 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+type ReportRange = 'day' | 'month' | 'quarter' | 'year'
+
+function readInt(value: string | null, fallback: number) {
+  const num = Number(value)
+  return Number.isInteger(num) ? num : fallback
+}
+
+function parseDateValue(value: string | null, fallback: Date) {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate())
+
+  const year = Number(match[1])
+  const month = Number(match[2]) - 1
+  const day = Number(match[3])
+  return new Date(year, month, day)
+}
+
+function parseMonthValue(value: string | null, fallback: Date) {
+  const match = value?.match(/^(\d{4})-(\d{2})$/)
+  if (!match) return new Date(fallback.getFullYear(), fallback.getMonth(), 1)
+
+  const year = Number(match[1])
+  const month = Number(match[2]) - 1
+  return new Date(year, month, 1)
+}
+
+function getReportPeriod(req: NextRequest) {
+  const searchParams = req.nextUrl.searchParams
+  const rangeParam = searchParams.get('range')
+  const range: ReportRange = rangeParam === 'day' || rangeParam === 'quarter' || rangeParam === 'year'
+    ? rangeParam
+    : 'month'
+  const now = new Date()
+
+  if (range === 'day') {
+    const start = parseDateValue(searchParams.get('date'), now)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 1)
+    return { range, start, end }
+  }
+
+  if (range === 'month') {
+    const start = parseMonthValue(searchParams.get('month'), now)
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
+    return { range, start, end }
+  }
+
+  if (range === 'quarter') {
+    const year = readInt(searchParams.get('year'), now.getFullYear())
+    const quarter = Math.min(Math.max(readInt(searchParams.get('quarter'), Math.floor(now.getMonth() / 3) + 1), 1), 4)
+    const start = new Date(year, (quarter - 1) * 3, 1)
+    const end = new Date(year, quarter * 3, 1)
+    return { range, start, end }
+  }
+
+  const year = readInt(searchParams.get('year'), now.getFullYear())
+  const start = new Date(year, 0, 1)
+  const end = new Date(year + 1, 0, 1)
+  return { range, start, end }
+}
+
 export async function GET(req: NextRequest) {
   try {
-    // 1. LẤY BỘ LỌC THỜI GIAN TỪ URL (Mặc định là 'month')
-    const searchParams = req.nextUrl.searchParams
-    const range = searchParams.get('range') || 'month'
+    const period = getReportPeriod(req)
+    const dateFilter = { gte: period.start, lt: period.end }
 
-    const now = new Date()
-    let startDate = new Date()
-
-    // 2. TÍNH MỐC THỜI GIAN BẮT ĐẦU DỰA VÀO RANGE
-    if (range === 'day') {
-      startDate.setHours(0, 0, 0, 0) // Từ 00:00:00 hôm nay
-    } else if (range === 'month') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1) // Ngày 1 của tháng này
-    } else if (range === 'quarter') {
-      const currentQuarter = Math.floor(now.getMonth() / 3)
-      startDate = new Date(now.getFullYear(), currentQuarter * 3, 1) // Ngày 1 của tháng đầu quý
-    } else if (range === 'year') {
-      startDate = new Date(now.getFullYear(), 0, 1) // Ngày 1/1 năm nay
-    }
-
-    // 3. THỰC THI TRUY VẤN VỚI MỐC startDate MỚI
     const invoiceStats = await prisma.invoice.aggregate({
-      where: { createdAt: { gte: startDate }, status: 'PAID' },
+      where: { createdAt: dateFilter, status: 'PAID' },
       _sum: { finalAmount: true, discount: true, totalAmount: true },
       _count: { id: true }
     })
 
     const soldItems = await prisma.invoiceItem.findMany({
-      where: { invoice: { createdAt: { gte: startDate }, status: 'PAID' } },
+      where: { invoice: { createdAt: dateFilter, status: 'PAID' } },
       select: { quantity: true, batch: { select: { importPrice: true } } }
     })
-    
+
     const totalCOGS = soldItems.reduce((sum, item) => sum + (item.quantity * item.batch.importPrice), 0)
     const revenue = invoiceStats._sum.finalAmount ?? 0
     const profit = revenue - totalCOGS
 
     const channelsData = await prisma.invoice.groupBy({
       by: ['channel'],
-      where: { createdAt: { gte: startDate }, status: 'PAID' },
+      where: { createdAt: dateFilter, status: 'PAID' },
       _sum: { finalAmount: true }
     })
 
     const paymentsData = await prisma.invoice.groupBy({
       by: ['paymentMethod'],
-      where: { createdAt: { gte: startDate }, status: 'PAID' },
+      where: { createdAt: dateFilter, status: 'PAID' },
       _sum: { finalAmount: true }
     })
 
     const wasteLogs = await prisma.wasteLog.findMany({
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
       select: { quantity: true, reason: true, batch: { select: { importPrice: true } } }
     })
 
@@ -66,7 +110,6 @@ export async function GET(req: NextRequest) {
       totalWasteCost += cost
     })
 
-    // (Giá trị tồn kho thì không bị ảnh hưởng bởi thời gian, vì nó luôn là số thực tại của ngày hôm nay)
     const activeBatches = await prisma.batch.findMany({
       where: { remaining: { gt: 0 }, status: { in: ['FRESH', 'NEAR_EXPIRY'] } },
       select: { remaining: true, importPrice: true }
@@ -91,6 +134,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('[GET /api/bao-cao] Error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Không thể tải dữ liệu báo cáo' }, { status: 500 })
   }
 }
