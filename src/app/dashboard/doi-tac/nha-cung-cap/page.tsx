@@ -197,7 +197,7 @@ export default function SuppliersPage() {
 
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-3xl mb-1">
+          <h1 style={{ fontFamily: 'var(--font-title)', color: guavaColors.textDark }} className="text-3xl mb-1">
             Nhà cung cấp
           </h1>
           <p className="text-slate-500 text-sm">Quản lý thông tin nhà cung cấp sản phẩm.</p>

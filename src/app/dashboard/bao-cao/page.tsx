@@ -107,7 +107,7 @@ export default function ReportsPage() {
         {/* HEADER & TIME FILTERS */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-4xl uppercase mb-1">
+            <h1 style={{ fontFamily: 'var(--font-title)', color: guavaColors.textDark }} className="text-4xl uppercase mb-1">
               BÁO CÁO KINH DOANH
             </h1>
             <p className="text-slate-500 text-sm font-medium">Thống kê dữ liệu cửa hàng chuyên sâu</p>

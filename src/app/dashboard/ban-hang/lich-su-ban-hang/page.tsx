@@ -42,7 +42,7 @@ export default function SalesHistoryPage() {
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
           <div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-3xl mb-1">
+            <h1 style={{ fontFamily: 'var(--font-title)', color: guavaColors.textDark }} className="text-3xl mb-1">
               Lịch sử bán hàng
             </h1>
             <p className="text-slate-500 text-sm">

@@ -198,7 +198,7 @@ export default function CustomersPage() {
 
       <div className="relative z-10 max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-3xl mb-1">
+          <h1 style={{ fontFamily: 'var(--font-title)', color: guavaColors.textDark }} className="text-3xl mb-1">
             Khách hàng
           </h1>
           <p className="text-slate-500 text-sm">Quản lý thông tin và điểm thưởng khách hàng.</p>

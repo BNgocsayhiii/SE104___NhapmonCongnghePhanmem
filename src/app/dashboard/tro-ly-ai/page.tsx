@@ -95,7 +95,7 @@ export default function TroLyAIPage() {
         {/* Header - Có kèm nút Làm mới đặt gọn gàng bên phải */}
         <div className="mb-6 flex flex-row items-end justify-between gap-4 border-b border-dashed border-slate-200 pb-4">
           <div className="text-left">
-            <h1 style={{ fontFamily: "'Playfair Display', serif", color: guavaColors.textDark }} className="text-4xl uppercase mb-1">
+            <h1 style={{ fontFamily: 'var(--font-title)', color: guavaColors.textDark }} className="text-4xl uppercase mb-1">
               TRỢ LÝ AI
             </h1>
             <p className="text-slate-500 text-sm font-medium">Tương tác dữ liệu kho hàng & Trò chuyện thông minh</p>

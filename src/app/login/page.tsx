@@ -116,7 +116,7 @@ export default function LoginPage() {
         }
 
         .logo-name {
-          font-family: 'Playfair Display', serif;
+          font-family: var(--font-title);
           font-size: 20px;
           font-weight: 700;
           color: #1a4d2e;
@@ -184,7 +184,7 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, color: '#1a4d2e', textAlign: 'center', marginBottom: 6 }}>
+          <h1 style={{ fontFamily: 'var(--font-title)', fontSize: 26, color: '#1a4d2e', textAlign: 'center', marginBottom: 6 }}>
             Đăng nhập
           </h1>
           <p style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 24, lineHeight: 1.6, fontWeight: 300 }}>

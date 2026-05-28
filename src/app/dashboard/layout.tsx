@@ -110,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f7f3ee', fontFamily: "'Instrument Sans', sans-serif" }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f7f3ee', fontFamily: 'var(--font-be-vietnam-pro)' }}>
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       
       <aside className="ft-sidebar">
@@ -192,8 +192,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
 const STYLES = `
 
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,500&display=swap');
-
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css');
 
 
@@ -208,7 +206,7 @@ const STYLES = `
 
   display: flex; flex-direction: column;
 
-  font-family: 'Instrument Sans', sans-serif;
+  font-family: var(--font-sidebar);
 
 }
 
@@ -242,7 +240,7 @@ const STYLES = `
 
 .ft-logo-name {
 
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-title);
 
   font-size: 17px; font-weight: 700;
 
@@ -516,7 +514,7 @@ const STYLES = `
 
   font-size: 11px; font-weight: 500; color: #7a8c7e;
 
-  font-family: 'Instrument Sans', sans-serif;
+  font-family: var(--font-be-vietnam-pro);
 
 }
 
