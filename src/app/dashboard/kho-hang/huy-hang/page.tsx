@@ -23,6 +23,8 @@ function todayInputValue() {
 }
 
 export default function TrangHuyHang() {
+  const [openForm, setOpenForm] = useState(false)
+
   const { data, draft, historyFilter, loading, submitting, error, successMessage, setDraft, setHistoryFilter, createWasteLog, quickDisposeExpired } = useWarehouseWaste()
   const [search, setSearch] = useState('')
   const selectedBatch = data?.batches.find(batch => batch.id === draft.batchId)
@@ -36,8 +38,8 @@ export default function TrangHuyHang() {
   }, [data?.wasteLogs, search])
 
   return (
-    <div className="h-[calc(100vh-32px)] overflow-hidden p-4 text-slate-800">
-      <div className="mx-auto flex h-full max-w-7xl flex-col gap-4">
+    <div className="min-h-screen p-4 text-slate-800">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4">
         <div className="flex items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black uppercase text-[#1a4d2e]">Hủy hàng</h1>
@@ -61,48 +63,150 @@ export default function TrangHuyHang() {
           <div className="rounded-xl bg-[#BEDE8A] p-5 shadow-sm"><p className="text-xs font-black uppercase text-slate-700">Có thể hủy</p><p className="mt-1 text-2xl font-black text-[#1a4d2e]">{data?.batches.length || 0}</p></div>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-5 xl:grid-cols-[430px_1fr]">
-          <section className="min-h-0 overflow-y-auto rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-black text-[#1a4d2e]">Ghi nhận hủy hàng</h2>
-            <div className="space-y-3">
-              <label className="block text-xs font-black uppercase text-slate-600">
-                Lô hàng
-                <select className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold outline-none focus:border-[#60A61F]" value={draft.batchId} onChange={(event) => setDraft({ ...draft, batchId: event.target.value })}>
-                  <option value="">Chọn lô cần hủy</option>
-                  {data?.batches.map(batch => (
-                    <option key={batch.id} value={batch.id}>{batch.batchCode} - {batch.productName} - còn {number.format(batch.effectiveRemaining)} {batch.unit}</option>
-                  ))}
-                </select>
-              </label>
+        <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)] items-start">
+<section className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+  {/* HEADER */}
+  <button
+    type="button"
+    onClick={() => setOpenForm(!openForm)}
+    className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-slate-50 rounded-xl transition-colors"
+  >
+    <div>
+      <h2 className="text-lg font-black text-[#1a4d2e]">
+        Ghi nhận hủy hàng
+      </h2>
+      <p className="text-xs font-semibold text-slate-500">
+        Nhấn để {openForm ? 'thu gọn' : 'mở form'}
+      </p>
+    </div>
 
-              {selectedBatch && (
-                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                  <p><span className="font-black">Tồn thực tế:</span> {number.format(selectedBatch.effectiveRemaining)} {selectedBatch.unit}</p>
-                  <p><span className="font-black">Hạn dùng:</span> {formatDate(selectedBatch.expiredAt)}</p>
-                  <p><span className="font-black">Giá vốn:</span> {money.format(selectedBatch.importPrice)} đ</p>
-                  <button type="button" onClick={() => setDraft({ ...draft, quantity: String(selectedBatch.effectiveRemaining), reason: 'EXPIRED' })} className="mt-3 rounded-lg bg-red-700 px-3 py-2 text-xs font-black text-white">
-                    Hủy hết lô này
-                  </button>
-                </div>
-              )}
+    <div
+      className={`transition-transform duration-200 text-[#4a9b5c] ${
+        openForm ? 'rotate-90' : ''
+      }`}
+    >
+      ▶
+    </div>
+  </button>
 
-              <label className="block text-xs font-black uppercase text-slate-600">
-                Số lượng hủy
-                <input className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold outline-none focus:border-[#60A61F]" type="number" min="0" step="0.1" value={draft.quantity} onChange={(event) => setDraft({ ...draft, quantity: event.target.value })} />
-              </label>
-              <label className="block text-xs font-black uppercase text-slate-600">
-                Lý do
-                <select className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold outline-none focus:border-[#60A61F]" value={draft.reason} onChange={(event) => setDraft({ ...draft, reason: event.target.value as WasteReason })}>
-                  {Object.entries(reasonLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <textarea className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-semibold outline-none focus:border-[#60A61F]" placeholder={draft.reason === 'OTHER' ? 'Ghi rõ lý do khác' : 'Ghi chú tình trạng hàng'} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} />
-              <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">Giá trị hủy ước tính: <span className="font-black text-red-700">{money.format(estimatedCost)} đ</span></div>
-              <button type="button" disabled={submitting} onClick={createWasteLog} className="w-full rounded-xl bg-red-700 py-3 text-sm font-black text-white hover:bg-red-800 disabled:opacity-50">{submitting ? 'Đang ghi nhận...' : 'Ghi nhận hủy hàng'}</button>
+  {/* CONTENT */}
+  {openForm && (
+    <div className="border-t border-slate-100 pt-5">
+      <div className="space-y-4">
+        <h2 className="text-lg font-black text-[#1a4d2e]">Ghi nhận hủy hàng</h2>
+
+        <div className="space-y-4">
+          {/* Chọn lô hàng */}
+          <label className="block">
+            <span className="block text-xs font-black uppercase text-slate-600 mb-1">
+              Lô hàng
+            </span>
+            <select 
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#4a9b5c] focus:ring-1 focus:ring-[#4a9b5c]"
+              value={draft.batchId} 
+              onChange={(e) => setDraft({ ...draft, batchId: e.target.value })}
+            >
+              <option value="">Chọn lô cần hủy</option>
+              {data?.batches?.map(batch => (
+                <option key={batch.id} value={batch.id}>
+                  {batch.batchCode} - {batch.productName} - còn {number.format(batch.effectiveRemaining)} {batch.unit}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {/* Thông tin lô đã chọn */}
+          {selectedBatch && (
+            <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-4 text-sm">
+              <p className="font-semibold text-slate-700">
+                <span className="font-black">Tồn thực tế:</span> {number.format(selectedBatch.effectiveRemaining)} {selectedBatch.unit}
+              </p>
+              <p className="font-semibold text-slate-700">
+                <span className="font-black">Hạn dùng:</span> {formatDate(selectedBatch.expiredAt)}
+              </p>
+              <p className="font-semibold text-slate-700">
+                <span className="font-black">Giá vốn:</span> {money.format(selectedBatch.importPrice)} đ
+              </p>
+
+              <button 
+                type="button" 
+                onClick={() => setDraft({ 
+                  ...draft, 
+                  quantity: String(selectedBatch.effectiveRemaining), 
+                  reason: 'EXPIRED' 
+                })} 
+                className="mt-3 rounded-lg bg-red-700 hover:bg-red-800 px-4 py-2 text-xs font-black text-white transition-colors"
+              >
+                Hủy hết lô này
+              </button>
             </div>
-          </section>
+          )}
 
-          <section className="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
+          {/* Số lượng hủy */}
+          <label className="block">
+            <span className="block text-xs font-black uppercase text-slate-600 mb-1">
+              Số lượng hủy
+            </span>
+            <input 
+              type="number" 
+              min="0" 
+              step="0.1"
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#4a9b5c] focus:ring-1 focus:ring-[#4a9b5c]"
+              value={draft.quantity} 
+              onChange={(e) => setDraft({ ...draft, quantity: e.target.value })} 
+            />
+          </label>
+
+          {/* Lý do */}
+          <label className="block">
+            <span className="block text-xs font-black uppercase text-slate-600 mb-1">
+              Lý do
+            </span>
+            <select 
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#4a9b5c] focus:ring-1 focus:ring-[#4a9b5c]"
+              value={draft.reason} 
+              onChange={(e) => setDraft({ ...draft, reason: e.target.value as WasteReason })}
+            >
+              {Object.entries(reasonLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+
+          {/* Ghi chú */}
+          <label className="block">
+            <span className="block text-xs font-black uppercase text-slate-600 mb-1">
+              Ghi chú
+            </span>
+            <textarea 
+              className="min-h-24 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#4a9b5c] focus:ring-1 focus:ring-[#4a9b5c]"
+              placeholder={draft.reason === 'OTHER' ? 'Ghi rõ lý do khác...' : 'Mô tả tình trạng hàng hóa...'}
+              value={draft.note} 
+              onChange={(e) => setDraft({ ...draft, note: e.target.value })} 
+            />
+          </label>
+
+          {/* Giá trị ước tính */}
+          <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 text-sm font-bold text-slate-700">
+            Giá trị hủy ước tính: <span className="font-black text-red-700">{money.format(estimatedCost)} đ</span>
+          </div>
+
+          {/* Nút xác nhận */}
+          <button 
+            type="button" 
+            disabled={submitting || !draft.batchId || !draft.quantity || Number(draft.quantity) <= 0}
+            onClick={createWasteLog} 
+            className="w-full rounded-xl bg-red-700 py-3.5 text-sm font-black text-white hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {submitting ? 'Đang ghi nhận...' : 'Ghi nhận hủy hàng'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+</section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
             <div className="border-b border-slate-100 px-5 py-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-lg font-black text-[#1a4d2e]">Lịch sử hủy hàng</h2>
@@ -117,7 +221,7 @@ export default function TrangHuyHang() {
                 </div>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto">
+            <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 z-10 border-b border-slate-100 bg-white text-xs uppercase text-slate-600">
                   <tr>
