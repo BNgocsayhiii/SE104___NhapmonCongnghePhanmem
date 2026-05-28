@@ -87,33 +87,23 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return apiError(formatZodError(parsed.error), { status: 400 })
 
     const body = parsed.data
+
+    // ✅ $transaction chỉ chứa các DB write cần atomic
     const invoice = await prisma.$transaction(async (tx) => {
       let customerId = body.customerId || undefined
 
       if (!customerId && body.customer?.phone && body.customer?.name) {
         const customer = await tx.customer.upsert({
           where: { phone: body.customer.phone },
-          update: {
-            name: body.customer.name,
-            email: body.customer.email,
-            address: body.customer.address,
-          },
-          create: {
-            name: body.customer.name,
-            phone: body.customer.phone,
-            email: body.customer.email,
-            address: body.customer.address,
-          },
+          update: { name: body.customer.name, email: body.customer.email, address: body.customer.address },
+          create: { name: body.customer.name, phone: body.customer.phone, email: body.customer.email, address: body.customer.address },
         })
         customerId = customer.id
       }
 
       let customerPoints = 0
       if (customerId) {
-        const customer = await tx.customer.findUnique({
-          where: { id: customerId },
-          select: { points: true },
-        })
+        const customer = await tx.customer.findUnique({ where: { id: customerId }, select: { points: true } })
         if (!customer) throw new Error('Khách hàng không tồn tại')
         customerPoints = customer.points
       }
@@ -122,50 +112,23 @@ export async function POST(req: NextRequest) {
       if (body.pointsUsed > customerPoints) throw new Error('Số điểm không đủ')
 
       const invoiceCode = await buildInvoiceCode(tx)
-      const invoiceItems: Array<{
-        productId: string
-        batchId: string
-        quantity: number
-        unitPrice: number
-        subtotal: number
-      }> = []
+      const invoiceItems: Array<{ productId: string; batchId: string; quantity: number; unitPrice: number; subtotal: number }> = []
 
       for (const item of body.items) {
-        const product = await tx.product.findUnique({
-          where: { id: item.productId },
-          select: { id: true, currentPrice: true, status: true },
-        })
+        const product = await tx.product.findUnique({ where: { id: item.productId }, select: { id: true, currentPrice: true, status: true } })
         if (!product || product.status !== 'ACTIVE') throw new Error('Sản phẩm không khả dụng')
 
         let remainingToSell = item.quantity
         const batches = await tx.batch.findMany({
-          where: {
-            productId: item.productId,
-            ...(item.batchId ? { id: item.batchId } : {}),
-            status: { in: ['FRESH', 'NEAR_EXPIRY'] },
-            effectiveRemaining: { gt: 0 },
-          },
+          where: { productId: item.productId, ...(item.batchId ? { id: item.batchId } : {}), status: { in: ['FRESH', 'NEAR_EXPIRY'] }, effectiveRemaining: { gt: 0 } },
           orderBy: [{ expiredAt: 'asc' }, { createdAt: 'asc' }],
         })
 
         for (const batch of batches) {
           if (remainingToSell <= 0) break
           const sellQuantity = Math.min(batch.effectiveRemaining, remainingToSell)
-          await tx.batch.update({
-            where: { id: batch.id },
-            data: {
-              remaining: { decrement: sellQuantity },
-              effectiveRemaining: { decrement: sellQuantity },
-            },
-          })
-
-          invoiceItems.push({
-            productId: product.id,
-            batchId: batch.id,
-            quantity: sellQuantity,
-            unitPrice: product.currentPrice,
-            subtotal: sellQuantity * product.currentPrice,
-          })
+          await tx.batch.update({ where: { id: batch.id }, data: { remaining: { decrement: sellQuantity }, effectiveRemaining: { decrement: sellQuantity } } })
+          invoiceItems.push({ productId: product.id, batchId: batch.id, quantity: sellQuantity, unitPrice: product.currentPrice, subtotal: sellQuantity * product.currentPrice })
           remainingToSell -= sellQuantity
         }
 
@@ -180,9 +143,7 @@ export async function POST(req: NextRequest) {
 
       const createdInvoice = await tx.invoice.create({
         data: {
-          invoiceCode,
-          customerId,
-          totalAmount,
+          invoiceCode, customerId, totalAmount,
           discountPercent: body.discountPercent,
           discount: discount + pointDiscount,
           pointsUsed: body.pointsUsed,
@@ -197,71 +158,43 @@ export async function POST(req: NextRequest) {
         },
         include: {
           customer: { select: { name: true, phone: true, points: true } },
-          items: {
-            include: {
-              product: { select: { name: true, unit: true } },
-              batch: { select: { batchCode: true } },
-            },
-          },
+          items: { include: { product: { select: { name: true, unit: true } }, batch: { select: { batchCode: true } } } },
         },
       })
 
       if (customerId && body.pointsUsed > 0) {
-        await tx.pointTransaction.create({
-          data: {
-            customerId,
-            invoiceId: createdInvoice.id,
-            delta: -body.pointsUsed,
-            reason: `Dùng điểm ${invoiceCode}`,
-          },
-        })
+        await tx.pointTransaction.create({ data: { customerId, invoiceId: createdInvoice.id, delta: -body.pointsUsed, reason: `Dùng điểm ${invoiceCode}` } })
       }
-
       if (customerId && pointsEarned > 0) {
-        await tx.pointTransaction.create({
-          data: {
-            customerId,
-            invoiceId: createdInvoice.id,
-            delta: pointsEarned,
-            reason: `Tích điểm ${invoiceCode}`,
-          },
-        })
+        await tx.pointTransaction.create({ data: { customerId, invoiceId: createdInvoice.id, delta: pointsEarned, reason: `Tích điểm ${invoiceCode}` } })
       }
-
       if (customerId && (body.pointsUsed > 0 || pointsEarned > 0)) {
-        await tx.customer.update({
-          where: { id: customerId },
-          data: { points: { increment: pointsEarned - body.pointsUsed } },
-        })
+        await tx.customer.update({ where: { id: customerId }, data: { points: { increment: pointsEarned - body.pointsUsed } } })
       }
 
-      await writeAuditLog(tx, {
-        userId: session.id,
-        action: 'CREATE_INVOICE',
-        target: 'Invoice',
-        targetId: createdInvoice.id,
-        newValue: {
-          invoiceCode,
-          customerId,
-          totalAmount,
-          finalAmount,
-          itemCount: invoiceItems.length,
-        },
-      })
-
+      // ✅ KHÔNG gọi writeAuditLog ở đây nữa
       return createdInvoice
+    })
+
+    // ✅ Gọi NGOÀI transaction — dùng prisma thay vì tx
+    await writeAuditLog(prisma, {
+      userId: session.id,
+      action: 'CREATE_INVOICE',
+      target: 'Invoice',
+      targetId: invoice.id,
+      newValue: {
+        invoiceCode: invoice.invoiceCode,
+        customerId: invoice.customerId,
+        totalAmount: invoice.totalAmount,
+        finalAmount: invoice.finalAmount,
+        itemCount: invoice.items.length,
+      },
     })
 
     return apiSuccess(invoice, { status: 201 })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Không tạo được hóa đơn'
-    const knownErrors = [
-      'Khách hàng không tồn tại',
-      'Cần chọn khách hàng để dùng điểm',
-      'Số điểm không đủ',
-      'Sản phẩm không khả dụng',
-      'Tồn kho không đủ',
-    ]
+    const knownErrors = ['Khách hàng không tồn tại', 'Cần chọn khách hàng để dùng điểm', 'Số điểm không đủ', 'Sản phẩm không khả dụng', 'Tồn kho không đủ']
     const status = knownErrors.includes(message) ? 400 : 500
     console.error('[POST /api/ban-hang/tao-hoa-don] Error:', error)
     return apiError(message, { status })
