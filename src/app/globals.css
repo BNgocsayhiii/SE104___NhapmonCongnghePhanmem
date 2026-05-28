@@ -1,7 +1,8 @@
 @import "tailwindcss";
+@import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 
 :root {
-  --background: #ffffff;
+  --background: linear-gradient(135deg, #FFD6E8 0%, #FFFACD 50%, #D4F1D4 100%);
   --foreground: #171717;
 }
 
@@ -16,15 +17,20 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: linear-gradient(135deg, #4a3a3a 0%, #4a4a3a 50%, #3a4a3a 100%);
+    --foreground: #962929;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #4a3a3a 0%, #4a4a3a 50%, #3a4a3a 100%) !important;
   }
 }
 
 body {
-  background: var(--background);
+  background: #ffffff;
   color: var(--foreground);
   font-family: var(--font-be-vietnam-pro);
+  min-height: 100vh;
 }
 
 h1,
@@ -33,8 +39,10 @@ h3,
 h4,
 h5,
 h6 {
+  font-weight: 900;
   font-family: var(--font-title);
 }
+
 
 .text-slate-400 {
   color: #64748b;

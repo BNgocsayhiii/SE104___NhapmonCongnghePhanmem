@@ -7,6 +7,7 @@ export default function SalesHistoryPage() {
   const { user } = useAuth()
   const isManager = user?.role === 'MANAGER'
   
+  
   const { 
     invoices, loading, 
     searchQuery, setSearchQuery,
@@ -16,7 +17,11 @@ export default function SalesHistoryPage() {
     selectedInvoice, setSelectedInvoice 
   } = useSalesHistory()
 
-  const guavaColors = { primary: '#60A61F', textDark: '#1a4d2e', highlight: '#e65c00' }
+  const guavaColors = { 
+  primary: '#60A61F', 
+  textDark: '#1a4d2e', 
+  highlight: '#e65c00' 
+}
   const floatingFruits = [
     { icon: '🍎', pos: 'top-[10%] right-[10%]', delay: '0s' },
     { icon: '🍇', pos: 'bottom-[20%] left-[5%]', delay: '1s' },
@@ -24,7 +29,7 @@ export default function SalesHistoryPage() {
   ]
 
   return (
-    <div className="fade-up p-6 relative min-h-full z-0 bg-transparent">
+    <div className="fade-up p-6 relative min-h-screen z-0 bg-gradient-to-br from-[#E1F0DA] via-[#FFF9E3] to-[#FDE8E9]">
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap');
         @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(5deg); } }
@@ -52,7 +57,7 @@ export default function SalesHistoryPage() {
 
           {/* BỘ LỌC (CHỈ MANAGER MỚI THẤY) */}
           {isManager && (
-            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-200/60 shadow-sm">
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md p-1.5 rounded-xl shadow-sm">
               <select 
                 className="ft-input bg-slate-50 border-none text-sm font-bold text-slate-600 px-3 py-1.5 rounded-lg cursor-pointer"
                 value={filterType} onChange={(e) => setFilterType(e.target.value as 'day' | 'month')}
@@ -78,18 +83,18 @@ export default function SalesHistoryPage() {
             placeholder="Mã hóa đơn, Tên KH..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="ft-input w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white shadow-sm transition-all text-sm text-slate-700"
+            className="ft-input w-full pl-10 pr-4 py-2.5 rounded-xl bg-white shadow-sm transition-all text-sm text-slate-700"
           />
         </div>
 
         {/* BẢNG DỮ LIỆU */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden relative min-h-[300px]">
+        <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-sm ...">
           {loading && <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center font-bold text-slate-400">Đang tải dữ liệu...</div>}
           
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
+                <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 font-bold">
                   <th className="py-4 px-6">Mã HĐ</th>
                   <th className="py-4 px-6">Thời gian</th>
                   <th className="py-4 px-6">Khách hàng</th>
@@ -104,7 +109,7 @@ export default function SalesHistoryPage() {
                   <tr><td colSpan={7} className="text-center py-10 text-slate-400">Không tìm thấy hóa đơn nào.</td></tr>
                 ) : (
                   invoices.map((inv) => (
-                    <tr key={inv.id} className="border-b border-dashed border-slate-100 hover:bg-slate-50/50 transition-colors last:border-0">
+                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-6 font-bold" style={{ color: guavaColors.textDark }}>{inv.invoiceCode}</td>
                       <td className="py-4 px-6 text-slate-500 text-xs">
                         {new Date(inv.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} <br/>
@@ -139,14 +144,14 @@ export default function SalesHistoryPage() {
         {/* MODAL XEM CHI TIẾT HÓA ĐƠN */}
         {selectedInvoice && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-up">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100">
+            <div className="bg-white/80 rounded-2xl p-6">
               <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h3 className="font-bold text-lg text-slate-800">Chi tiết {selectedInvoice.invoiceCode}</h3>
                 <button onClick={() => setSelectedInvoice(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 font-bold">✕</button>
               </div>
               
               <div className="p-6">
-                <div className="flex justify-between text-sm mb-4 pb-4 border-b border-dashed border-slate-200">
+                <div className="flex justify-between text-sm mb-4 pb-4">
                   <div>
                     <p className="text-slate-500 mb-1">Khách hàng</p>
                     <p className="font-bold text-slate-800">{selectedInvoice.customer?.name || 'Khách mua lẻ'}</p>
@@ -172,7 +177,7 @@ export default function SalesHistoryPage() {
                   ))}
                 </div>
 
-                <div className="mt-5 pt-4 border-t border-slate-200">
+                <div className="mt-5 pt-4">
                   <div className="flex justify-between text-sm text-slate-500 mb-2">
                     <span>Tổng phụ</span>
                     <span>{selectedInvoice.totalAmount.toLocaleString('vi-VN')} ₫</span>

@@ -28,11 +28,11 @@ export default function DashboardOverview() {
   ]
 
   return (
-    <div className="min-h-full bg-transparent p-6 text-slate-800">
+    <div className="min-h-screen bg-gradient-to-br from-[#f4ebeb] via-[#FFF9E3] to-[#caf5dd] p-6 text-slate-800">
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-black uppercase text-[#1a4d2e]">Bảng điều phối khẩn cấp</h1>
+            <h1 className="text-3xl font-black uppercase text-[#124225]">Bảng điều phối khẩn cấp</h1>
             <p className="mt-1 text-sm font-semibold text-slate-600">Ưu tiên xử lý hàng cận hạn, thiếu tồn và đơn online đang chờ.</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm">

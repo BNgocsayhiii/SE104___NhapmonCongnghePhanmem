@@ -43,7 +43,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   
   const [dateStr, setDateStr] = useState('')
   const [greeting, setGreeting] = useState('')
-  const [openGroup, setOpenGroup] = useState<string | null>(null)
 
   const hasAccess = (href: string) => {
     if (currentRole === ROLES.MANAGER) return true
@@ -110,7 +109,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f7f3ee', fontFamily: 'var(--font-be-vietnam-pro)' }}>
+    <div style={{
+          display: 'flex',
+          height: '100vh',
+          overflowY: 'hidden',
+          overflowX: 'visible',
+          background: 'transparent',
+          fontFamily: 'var(--font-be-vietnam-pro)',
+        }}
+      >
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       
       <aside className="ft-sidebar">
@@ -127,24 +134,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <i className={`ti ${item.icon} ni`} /> {item.label}
                 </Link>
               ) : (
-                <>
-                  <button 
-                    className={`ft-nav-link ${pathname.includes(item.href) ? 'active' : ''} ${openGroup === item.href ? 'open' : ''}`}
-                    onClick={() => setOpenGroup(prev => prev === item.href ? null : item.href)}
-                  >
+                <div className="ft-nav-group">           {/* ← Đơn giản hơn nhiều */}
+                  <div className={`ft-nav-link ${pathname.includes(item.href) ? 'active' : ''}`}>
                     <i className={`ti ${item.icon} ni`} /> {item.label}
-                    <span className="ft-chevron">▾</span>
-                  </button>
-                  {openGroup === item.href && (
-                    <div className="ft-nav-sub">
-                      {item.children?.map(child => (
-                        <Link key={child.href} href={child.href} className={`ft-nav-sub-link ${pathname === child.href ? 'active' : ''}`}>
-                          {child.label}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </>
+                    <span className="ft-chevron">▸</span>
+                  </div>
+
+                  {/* Popup luôn render, hiện/ẩn bằng CSS */}
+                  <div className="ft-popup">
+                    <p className="ft-popup-title">{item.label}</p>
+                    {item.children?.map(child => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={`ft-popup-link ${pathname === child.href ? 'active' : ''}`}
+                      >
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               )}
             </React.Fragment>
           ))}
@@ -207,6 +216,9 @@ const STYLES = `
   display: flex; flex-direction: column;
 
   font-family: var(--font-sidebar);
+  position: relative;
+  z-index: 100;
+  overflow: visible;
 
 }
 
@@ -259,11 +271,9 @@ const STYLES = `
 }
 
 .ft-nav {
-
-  flex: 1; overflow-y: auto; padding: 10px;
-
-  scrollbar-width: none;
-
+  flex: 1;
+  overflow: visible;
+  position: relative;
 }
 
 .ft-nav::-webkit-scrollbar { display: none; }
@@ -296,8 +306,9 @@ const STYLES = `
 
 .ft-nav-link.active {
 
-  background: #4a9b5c; color: white; font-weight: 600;
-
+  background:  rgba(74,155,92,0.12);
+  color: #2d6a45; 
+  font-weight: 900;
   box-shadow: 0 3px 10px rgba(74,155,92,0.2);
 
 }
@@ -356,7 +367,7 @@ const STYLES = `
 
 .ft-nav-sub-link:hover { color: #4a9b5c; background: rgba(74,155,92,0.05); }
 
-.ft-nav-sub-link.active { color: #4a9b5c; font-weight: 600; }
+.ft-nav-sub-link.active { color: #4a9b5c; font-weight: 900; }
 
 .ft-ai-btn {
 
@@ -489,9 +500,13 @@ const STYLES = `
 .ft-user-meta p:last-child   { font-size: 11.5px; font-weight: 600; color: #1a4d2e; margin-top: 2px; }
 
 .ft-main {
-
-  flex: 1; display: flex; flex-direction: column; overflow: hidden;
-
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  overflow-x: visible;
+  overflow-y: hidden;
+  position: relative;
+  z-index: 1;               /* Giữ thấp */
 }
 
 .ft-topbar {
@@ -521,13 +536,78 @@ const STYLES = `
 .ft-topbar-chip .dot { width: 5px; height: 5px; border-radius: 50%; background: #3d8c5a; }
 
 .ft-content {
-
-  flex: 1; overflow-y: auto; padding: 16px 22px 22px;
-
+  flex: 1; 
+  overflow-y: auto;
+  overflow-x: visible;
+  padding: 0;
+  background: linear-gradient(135deg, #E1F0DA, #FFF9E3, #FDE8E9); 
   scrollbar-width: none;
-
+  position: relative;
+  z-index: 1;
 }
 
 .ft-content::-webkit-scrollbar { display: none; }
+.ft-nav-group { 
+  position: relative; 
+}
+.ft-nav-group:hover .ft-nav-link {
+  background: rgba(74,155,92,0.07);
+  color: #4a9b5c;
+}
+
+.ft-popup {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  transform: translateX(8px);
+  background: white;
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 200px;
+
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+  border: 0.5px solid #eef3ec;
+
+  z-index: 99999;
+
+  opacity: 0;
+  visibility: hidden;
+
+  transition: all 0.15s ease;
+  pointer-events: none;
+
+  transform: translateX(10px);
+}
+
+.ft-sidebar {
+  position: relative;
+  z-index: 9999;
+}
+.ft-nav {
+  position: relative;
+  z-index: 150;
+}
+
+.ft-nav-group:hover .ft-popup {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+.ft-popup-title {
+  font-size: 10px; font-weight: 700; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 4px 10px 6px; margin: 0;
+}
+
+.ft-popup-link {
+  display: flex; align-items: center;
+  padding: 7px 10px; border-radius: 7px;
+  font-size: 12px; font-weight: 500; color: #475569;
+  text-decoration: none; transition: all 0.12s;
+}
+
+.ft-popup-link:hover { background: rgba(74,155,92,0.08); color: #4a9b5c; }
+.ft-popup-link.active { color: #4a9b5c; font-weight: 600; background: rgba(74,155,92,0.08); }
 
 `
