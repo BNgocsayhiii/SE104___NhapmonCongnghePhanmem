@@ -32,8 +32,7 @@ export default function DashboardOverview() {
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-black uppercase text-[#124225]">Bảng điều phối khẩn cấp</h1>
-            <p className="mt-1 text-sm font-semibold text-slate-600">Ưu tiên xử lý hàng cận hạn, thiếu tồn và đơn online đang chờ.</p>
+            <h1 className="text-3xl font-black uppercase text-[#124225]">Hi! TruiTrack</h1>
           </div>
           
         </div>
