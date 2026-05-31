@@ -218,40 +218,40 @@ export default function ReportsPage() {
 
         {/* 4 Ô Chỉ số Tổng quan */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBg1 }}>
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden bg-gradient-to-br from-white via-lime-100 to-emerald-100 transition-shadow duration-200 hover:shadow-2xl">
             {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
-            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Doanh Thu ({activeLabel})</p>
-            <p style={{ color: guavaColors.textDark }} className="text-2xl font-black">
+            <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">Doanh Thu ({activeLabel})</p>
+            <p className="text-xl font-black text-rose-900 whitespace-nowrap">
               {data?.summary.revenue.toLocaleString('vi-VN')} ₫
             </p>
-            <p className="text-[11px] text-slate-600 mt-2 font-medium">Tổng số đơn: {data?.summary.invoiceCount || 0}</p>
+            <p className="text-[11px] text-emerald-900 mt-2 font-medium">Tổng số đơn: {data?.summary.invoiceCount || 0}</p>
           </div>
 
-          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBgProfit }}>
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden bg-gradient-to-br from-emerald-100 via-lime-100 to-pink-200 transition-shadow duration-200 hover:shadow-2xl">
             {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
-            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Lợi Nhuận Gộp</p>
-            <p style={{ color: guavaColors.textDark }} className="text-2xl font-black">
+            <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">Lợi Nhuận Gộp</p>
+            <p className="text-xl font-black text-rose-900 whitespace-nowrap">
               {data?.summary.profit.toLocaleString('vi-VN')} ₫
             </p>
-            <p className="text-[11px] text-slate-600 mt-2 font-medium">Chưa trừ chi phí vận hành cố định</p>
+            <p className="text-[11px] text-emerald-900 mt-2 font-medium">Chưa trừ chi phí vận hành cố định</p>
           </div>
 
-          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBgWaste }}>
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden bg-gradient-to-br from-pink-100 via-rose-100 to-amber-100 transition-shadow duration-200 hover:shadow-2xl">
             {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
-            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Tổn Thất Hao Hụt</p>
-            <p className="text-2xl font-black text-red-900">
+            <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">Tổn Thất Hao Hụt</p>
+            <p className="text-xl font-black text-rose-900 whitespace-nowrap">
               {data?.summary.totalWasteCost.toLocaleString('vi-VN')} ₫
             </p>
-            <p className="text-[11px] text-red-900/80 mt-2 font-medium">Tính dựa trên giá vốn nhập vào</p>
+            <p className="text-[11px] text-emerald-900 mt-2 font-medium">Tính dựa trên giá vốn nhập vào</p>
           </div>
 
-          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden" style={{ backgroundColor: guavaColors.cardBgStock }}>
+          <div className="p-5 rounded-2xl shadow-sm relative overflow-hidden bg-gradient-to-br from-amber-100 via-orange-200 to-orange-400 transition-shadow duration-200 hover:shadow-2xl">
             {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10"></div>}
-            <p className="text-xs font-bold text-slate-700/70 uppercase tracking-wider mb-1">Giá Trị Kho Tồn</p>
-            <p style={{ color: guavaColors.textDark }} className="text-2xl font-black">
+            <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider mb-1">Giá Trị Kho Tồn</p>
+            <p className="text-xl font-black text-rose-900 whitespace-nowrap">
               {data?.summary.totalInventoryValue.toLocaleString('vi-VN')} ₫
             </p>
-            <p className="text-[11px] text-slate-600 mt-2 font-medium">Vốn lưu động hiện tại (Cập nhật Real-time)</p>
+            <p className="text-[11px] text-emerald-900 mt-2 font-medium">Vốn lưu động hiện tại (Cập nhật Real-time)</p>
           </div>
         </div>
 
@@ -259,7 +259,7 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           
           {/* CỘT 1: CƠ CẤU */}
-          <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm relative">
+          <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm relative transition-shadow duration-200 hover:shadow-2xl">
             {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 rounded-2xl"></div>}
             <h3 style={{ color: guavaColors.textDark }} className="font-bold text-lg mb-4">📊 Kênh Bán Hàng & Phương Thức</h3>
             
@@ -295,7 +295,7 @@ export default function ReportsPage() {
           </div>
 
           {/* CỘT 2: HAO HỤT */}
-          <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm relative">
+          <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl border border-slate-200/60 shadow-sm relative transition-shadow duration-200 hover:shadow-2xl">
             {loading && <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 rounded-2xl"></div>}
             <h3 className="font-bold text-lg mb-2 text-red-900">📉 Phân Tích Nguyên Nhân Hao Hụt</h3>
             <p className="text-xs text-slate-400 mb-4">Dữ liệu được lọc theo khoảng thời gian được chọn</p>

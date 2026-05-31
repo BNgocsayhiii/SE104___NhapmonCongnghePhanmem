@@ -247,13 +247,13 @@ export default function TrangNhapHang() {
               <input className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold outline-none focus:border-[#60A61F]" placeholder="Ghi chú phiếu nhập..." value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
             </div>
 
-            <div className="mt-6 flex items-center justify-between rounded-xl bg-slate-800 p-4 text-white shadow-xl">
+            <div className="mt-6 flex items-center justify-between rounded-xl bg-lime-700 p-4 text-white shadow-xl">
               <div>
-                <p className="text-xs font-bold uppercase text-slate-400">Dự kiến tổng chi</p>
+                <p className="text-xs font-bold uppercase text-slate-300">Dự kiến tổng chi</p>
                 <p className="text-2xl font-black">{new Intl.NumberFormat('vi-VN').format(estimatedTotal)} ₫</p>
               </div>
               <button
-                className="rounded-xl bg-[#60A61F] px-8 py-3 text-sm font-black uppercase tracking-wider text-white hover:bg-green-600 disabled:opacity-50"
+                className="rounded-xl bg-gradient-to-r from-lime-500 to-pink-300 px-8 py-3 text-sm font-black uppercase tracking-wider text-white shadow-xl transition-colors duration-200 hover:from-lime-400 hover:via-fuchsia-200 hover:to-pink-200 disabled:opacity-50"
                 onClick={createImport}
                 disabled={submitting}
               >

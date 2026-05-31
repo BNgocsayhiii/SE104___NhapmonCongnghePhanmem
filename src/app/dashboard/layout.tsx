@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // 1. Cấu hình Menu gốc
   const menuConfig = useMemo((): NavItem[] => [
-    { href: '/dashboard', icon: 'ti-layout-dashboard', label: 'Tổng quan', single: true },
+    
     {
       href: '/dashboard/kho-hang', icon: 'ti-building-warehouse', label: 'Kho hàng',
       children: [
@@ -120,23 +120,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
       <style dangerouslySetInnerHTML={{ __html: STYLES }} />
       
-      <aside className="ft-sidebar">
-        <Link href="/dashboard" className="ft-logo">
-          <div className="ft-logo-icon">🍃</div>
-          <div className="ft-logo-name">Frui<span>Track</span></div>
-        </Link>
+    <aside className="ft-sidebar">
+      <Link
+        href="/dashboard"
+        className="ft-logo transition duration-200 hover:bg-green-100 hover:text-green-700"
+      >
+        <div className="ft-logo-icon">🍃</div>
+
+        <div className="ft-logo-name">
+          Frui<span>Track</span>
+        </div>
+      </Link>
 
         <nav className="ft-nav">
           {navItems.map((item) => (
             <React.Fragment key={item.href}>
               {item.single ? (
                 <Link href={item.href} className={`ft-nav-link ${pathname === item.href ? 'active' : ''}`}>
-                  <i className={`ti ${item.icon} ni`} /> {item.label}
+                    <i className={`ti ${item.icon} ni`} /> <span className="ft-nav-label">{item.label}</span>
                 </Link>
               ) : (
                 <div className="ft-nav-group">           {/* ← Đơn giản hơn nhiều */}
                   <div className={`ft-nav-link ${pathname.includes(item.href) ? 'active' : ''}`}>
-                    <i className={`ti ${item.icon} ni`} /> {item.label}
+                    <i className={`ti ${item.icon} ni`} /> <span className="ft-nav-label">{item.label}</span>
                     <span className="ft-chevron">▸</span>
                   </div>
 
@@ -205,9 +211,9 @@ const STYLES = `
 
 
 
-.ft-sidebar {
+ .ft-sidebar {
 
-  width: 210px; min-width: 210px;
+  width: 72px; min-width: 72px;
 
   background: #ffffff;
 
@@ -219,8 +225,31 @@ const STYLES = `
   position: relative;
   z-index: 100;
   overflow: visible;
+  transition: width 0.2s ease;
 
 }
+
+ .ft-sidebar:hover {
+   width: 210px; min-width: 210px;
+ }
+
+ .ft-sidebar:not(:hover) {
+   overflow: hidden;
+ }
+
+ .ft-sidebar:not(:hover) .ft-logo-name {
+   opacity: 0;
+   width: 0;
+   overflow: hidden;
+ }
+
+ .ft-sidebar:not(:hover) .ft-ai-btn span {
+   display: none;
+ }
+
+ .ft-sidebar:not(:hover) .ft-nav-divider {
+   margin: 6px 0;
+ }
 
 .ft-logo {
 
@@ -238,7 +267,8 @@ const STYLES = `
 
   width: 32px; height: 32px;
 
-  background: linear-gradient(135deg, #3d8c5a 0%, #2d6a45 100%);
+  /* Màu nền mới: xanh lá nhạt */
+  background: linear-gradient(135deg, #dff7e6 0%, #c7f1d3 100%);
 
   border-radius: 9px;
 
@@ -246,7 +276,7 @@ const STYLES = `
 
   font-size: 16px; flex-shrink: 0;
 
-  box-shadow: 0 3px 10px rgba(61,140,90,0.28);
+  box-shadow: 0 3px 10px rgba(50,120,60,0.12);
 
 }
 
@@ -301,6 +331,33 @@ const STYLES = `
   background: none; border: none; width: 100%; text-align: left;
 
 }
+ .ft-nav-label {
+   display: inline-block;
+   opacity: 1;
+   width: auto;
+   overflow: hidden;
+   white-space: nowrap;
+   transition: opacity 0.15s ease, width 0.15s ease, margin 0.15s ease;
+ }
+
+ .ft-sidebar:not(:hover) .ft-nav-link {
+   justify-content: center;
+ }
+
+ .ft-sidebar:not(:hover) .ft-nav-label {
+   opacity: 0;
+   width: 0;
+   margin-left: 0;
+ }
+
+ .ft-sidebar:not(:hover) .ft-nav-link .ft-chevron {
+   display: none;
+ }
+
+/* When sidebar is collapsed, show only avatar in user card */
+.ft-sidebar:not(:hover) .ft-user-meta { display: none; }
+.ft-sidebar:not(:hover) .ft-user-card { justify-content: center; }
+.ft-sidebar:not(:hover) .ft-user-card button { display: none; }
 
 .ft-nav-link:hover { background: rgba(74,155,92,0.07); color: #4a9b5c; }
 
@@ -461,9 +518,9 @@ const STYLES = `
 
 .ft-store-status p { margin: 0; }
 
-.ft-store-status p:first-child { font-size: 10.5px; color: #1a4d2e; font-weight: 600; }
+.ft-store-status p:first-child { font-size: 13px; color: #1a4d2e; font-weight: 600; }
 
-.ft-store-status p:last-child  { font-size: 9.5px; color: #94a3b8; margin-top: 2px; }
+.ft-store-status p:last-child  { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 
 .ft-user-card {
 
@@ -497,7 +554,7 @@ const STYLES = `
 
 .ft-user-meta p:first-child { font-size: 9.5px; color: #94a3b8; line-height: 1; }
 
-.ft-user-meta p:last-child   { font-size: 11.5px; font-weight: 600; color: #1a4d2e; margin-top: 2px; }
+.ft-user-meta p:last-child   { font-size: 14px; font-weight: 600; color: #1a4d2e; margin-top: 2px; }
 
 .ft-main {
   flex: 1; 

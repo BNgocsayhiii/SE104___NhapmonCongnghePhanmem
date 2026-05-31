@@ -21,10 +21,10 @@ export default function DashboardOverview() {
   const { stats, loading, error } = useDashboardStats()
 
   const cards = [
-    { label: 'Lô cần xử lý', value: stats?.expiringSoon.formatted || '0 lô', tone: 'bg-red-100 text-red-900', href: '/dashboard/kho-hang/huy-hang' },
-    { label: 'Sắp hết hàng', value: stats?.lowStock.formatted || '0 mặt hàng', tone: 'bg-amber-100 text-amber-900', href: '/dashboard/kho-hang/nhap-hang' },
-    { label: 'Đơn online chờ', value: `${stats?.pendingOnlineOrders.length || 0} đơn`, tone: 'bg-blue-100 text-blue-900', href: '/dashboard/ban-hang/lich-su-ban-hang' },
-    { label: 'Doanh thu hôm nay', value: stats?.revenue.formatted || '0 đ', tone: 'bg-green-100 text-green-900', href: '/dashboard/bao-cao' },
+    { label: 'Lô cần xử lý', value: stats?.expiringSoon.formatted || '0 lô', tone: 'bg-gradient-to-br from-white via-lime-100 to-emerald-100 text-emerald-900', href: '/dashboard/kho-hang/huy-hang' },
+    { label: 'Sắp hết hàng', value: stats?.lowStock.formatted || '0 mặt hàng', tone: 'bg-gradient-to-br from-emerald-100 via-lime-100 to-pink-100 text-emerald-900', href: '/dashboard/kho-hang/nhap-hang' },
+    { label: 'Doanh thu hôm nay', value: stats?.revenue.formatted || '0 đ', tone: 'bg-gradient-to-br from-pink-100 via-rose-100 to-amber-100 text-rose-900', href: '/dashboard/bao-cao' },
+    { label: 'Lợi nhuận hôm nay', value: stats?.profit.formatted || '0 đ', tone: 'bg-gradient-to-br from-amber-100 via-amber-200 to-orange-200 text-emerald-900', valueColor: 'text-rose-700', href: '/dashboard/bao-cao' },
   ]
 
   return (
@@ -35,18 +35,20 @@ export default function DashboardOverview() {
             <h1 className="text-3xl font-black uppercase text-[#124225]">Bảng điều phối khẩn cấp</h1>
             <p className="mt-1 text-sm font-semibold text-slate-600">Ưu tiên xử lý hàng cận hạn, thiếu tồn và đơn online đang chờ.</p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm">
-            Lợi nhuận hôm nay: <span className="text-[#1a4d2e]">{stats?.profit.formatted || '0 đ'}</span>
-          </div>
+          
         </div>
 
         {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>}
 
         <div className="grid gap-4 md:grid-cols-4">
           {cards.map(card => (
-            <Link key={card.label} href={card.href} className={`rounded-xl p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${card.tone}`}>
-              <p className="text-xs font-black uppercase tracking-wide opacity-80">{card.label}</p>
-              <p className="mt-2 text-2xl font-black">{loading ? '...' : card.value}</p>
+            <Link key={card.label} href={card.href} className={`rounded-xl p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-2xl ${card.tone}`}>
+              <p className="text-xs font-black uppercase tracking-wide opacity-80 text-emerald-900">{card.label}</p>
+              <p className="mt-2 text-2xl font-black">
+                {loading ? (card.valueColor ? <span className={card.valueColor}>...</span> : <span className="text-rose-700">...</span>) : (
+                  card.valueColor ? <span className={card.valueColor}>{card.value}</span> : <span className="text-rose-700">{card.value}</span>
+                )}
+              </p>
             </Link>
           ))}
         </div>
@@ -118,28 +120,6 @@ export default function DashboardOverview() {
                       <p className="font-black text-amber-900">{number.format(product.totalRemaining)} {product.unit}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-sm">
-              <h2 className="mb-4 text-lg font-black text-blue-800">Đơn online đang chờ</h2>
-              <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
-                {loading ? <p className="font-semibold text-slate-600">Đang tải...</p> : stats?.pendingOnlineOrders.length === 0 ? (
-                  <p className="py-6 text-center text-sm font-semibold text-slate-600">Không có đơn online cần xử lý.</p>
-                ) : stats?.pendingOnlineOrders.map(order => (
-                  <Link key={order.id} href="/dashboard/ban-hang/lich-su-ban-hang" className="block rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 hover:bg-blue-100">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-black text-slate-900">{order.invoiceCode}</p>
-                        <p className="text-xs font-semibold text-slate-600">{order.customerName} - {formatDate(order.createdAt)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-black text-blue-900">{money.format(order.finalAmount)} đ</p>
-                        <p className="text-xs font-bold text-blue-700">{order.status}</p>
-                      </div>
-                    </div>
-                  </Link>
                 ))}
               </div>
             </section>
