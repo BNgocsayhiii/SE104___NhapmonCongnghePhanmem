@@ -32,7 +32,7 @@ export default function DashboardOverview() {
       <div className="mx-auto max-w-7xl space-y-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-black uppercase text-[#124225]">Hi! TruiTrack</h1>
+            <h1 className="text-3xl font-black uppercase text-[#124225]">Hi! FruiTrack</h1>
           </div>
           
         </div>

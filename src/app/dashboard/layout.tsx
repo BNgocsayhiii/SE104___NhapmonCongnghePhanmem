@@ -125,7 +125,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         href="/dashboard"
         className="ft-logo transition duration-200 hover:bg-green-100 hover:text-green-700"
       >
-        <div className="ft-logo-icon">🍃</div>
+        <div className="ft-logo-icon">
+          <img src="/favicon.ico" alt="logo" width={40} height={40} />
+        </div>
 
         <div className="ft-logo-name">
           Frui<span>Track</span>
