@@ -97,15 +97,15 @@ export default function LoginPage() {
         }
 
         .logo-icon {
-          width: 36px;
-          height: 36px;
-          background: linear-gradient(135deg, #3d8c5a 0%, #2d6a45 100%);
-          border-radius: 10px;
+          width: 52px;
+          height: 52px;
+          background: linear-gradient(135deg, #ecfdf5 0%, #bbf7d0 55%, #4ade80 100%);
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 18px;
-          box-shadow: 0 4px 14px rgba(61,140,90,0.35);
+          font-size: 24px;
+          box-shadow: 0 6px 18px rgba(34,197,94,0.18);
           flex-shrink: 0;
         }
 
@@ -156,7 +156,9 @@ export default function LoginPage() {
       {/* Topbar with Synchronized Logo */}
       <div className="relative z-10 flex items-center justify-center px-7 py-5 mt-4">
         <div className="logo-mark">
-          <div className="logo-icon">🍃</div>
+          <div className="logo-icon">
+            <img src="/favicon.ico" alt="logo" width={80} height={80} />
+          </div>
           <div className="logo-text">
             <div className="logo-name">Frui<span>Track</span></div>
             <div className="logo-tagline">Fruit inventory system</div>
